@@ -1,0 +1,8 @@
+node_modules
+
+# REPO SPECIFIC
+.gptignore
+*copy*
+context.py
+combine.py
+GEN_REPO_CONTEXT.md
