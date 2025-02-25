@@ -1,865 +1,192 @@
-I've reviewed the moviewatch application scope document and can see you need a .windsurfrules file that adapts the Picksies template to build your movie watchlist application. Let me create a comprehensive rules file that maintains the template's architecture while implementing your specific requirements.
+You are an expert TypeScript full-stack engineer specializing in building modern, type-safe applications. Your task is to build a **Movie Watchlist Application** using the following stack:
 
-Here's a .windsurfrules file tailored for your movie watchlist application:
+- **Frontend**: React 18 with TypeScript, Vite
+- **Backend**: FastAPI with Pydantic models
+- **Database**: SQLite with SQLAlchemy 2.0
+- **State Management**: Zustand for global state, React Query for server state
+- **Styling**: Tailwind CSS with shadcn/ui components
+- **External API**: Overseerr API for movie data
 
-```markdown
-# Movie Watchlist Application Development Guidelines
+The application should feature UUID-based sharing, real-time updates via polling, and advanced filtering capabilities.
 
-You are an expert TypeScript full-stack engineer specializing in building modern, type-safe applications. Your expertise covers React with TypeScript, FastAPI, SQLAlchemy, and RESTful API integration.
+---
 
 ## Technical Architecture
 
-### Stack Overview
+### Backend API
 
-- **Frontend**: React 18 with TypeScript, Vite
-- **Backend API**: FastAPI with Pydantic
-- **Database**: SQLite with SQLAlchemy 2.0
-- **State Management**: Zustand for global state, React Query for server state
-- **External API**: Overseerr API integration for movie data
+1. Implement the following endpoints:
+   - `GET /watchlist/{list_id}`: Retrieve a watchlist by UUID.
+   - `POST /watchlist`: Create a new watchlist.
+   - `GET /watchlist/{list_id}/movies`: Retrieve all movies in a watchlist.
+   - `POST /watchlist/{list_id}/movies`: Add a movie to a watchlist.
+   - `PATCH /watchlist/{list_id}/movies/{movie_id}`: Update a movie (e.g., mark as watched).
+   - `DELETE /watchlist/{list_id}/movies/{movie_id}`: Remove a movie from a watchlist.
+   - `GET /search?query={search_term}`: Search for movies by title.
+   - `GET /discover`: Discover movies with advanced filtering options.
 
-## Database Schema Guidelines
+2. Use Pydantic models for request and response validation:
+   ```
+   class MovieBase(BaseModel):
+       title: str
+       tmdb_id: int
+       year: Optional[int] = None
+       poster_path: Optional[str] = None
+       overview: Optional[str] = None
+       vote_average: Optional[float] = None
+       genre_ids: Optional[str] = None
 
-### Database Models
+   class Movie(MovieBase):
+       id: UUID
+       status: str = "to_watch"
+       watchlist_id: UUID
+       created_at: datetime
 
-Create the following tables in your schema:
+       class Config:
+           orm_mode = True
+   ```
 
-```typescript
-// Watchlist table
-export const watchlists = createTable("watchlists", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: varchar("name", { length: 255 }).notNull(),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-});
+3. Integrate Overseerr API for search and discovery:
+   ```
+   class OverseerrService:
+       def __init__(self):
+           self.base_url = "https://overseerr-instance/api/v1"
+           self.client = httpx.AsyncClient()
 
-// Movies table
-export const movies = createTable("movies", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  tmdb_id: integer("tmdb_id").notNull(),
-  title: varchar("title", { length: 255 }).notNull(),
-  year: integer("year"),
-  poster_path: text("poster_path"),
-  overview: text("overview"),
-  vote_average: numeric("vote_average"),
-  genre_ids: text("genre_ids"), // Store as JSON string
-  status: text("status").$type<"to_watch" | "watched">().notNull().default("to_watch"),
-  watchlist_id: uuid("watchlist_id")
-    .notNull()
-    .references(() => watchlists.id, { onDelete: "cascade" }),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-});
+       async def search_movies(self, query: str, page: int = 1):
+           response = await self.client.get(
+               f"{self.base_url}/search",
+               params={"query": query, "page": page}
+           )
+           return response.json()
 
-// Optional user attribution
-export const users = createTable("users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: varchar("name", { length: 255 }).notNull(),
-  watchlist_id: uuid("watchlist_id")
-    .notNull()
-    .references(() => watchlists.id, { onDelete: "cascade" }),
-  created_at: timestamp("created_at").defaultNow().notNull(),
-});
-```
+       async def discover_movies(self, filters: dict):
+           response = await self.client.get(
+               f"{self.base_url}/discover/movies",
+               params=filters
+           )
+           return response.json()
+   ```
 
-## Backend API Development
+---
 
-### API Structure
+### Database Schema
 
-Implement the following endpoints:
-
-1. **Watchlist Management**
-   - `GET /watchlist/{list_id}` - Get a watchlist by UUID
-   - `POST /watchlist` - Create a new watchlist
-   - `GET /watchlist/{list_id}/movies` - Get all movies in a watchlist
-   - `POST /watchlist/{list_id}/movies` - Add a movie to a watchlist
-   - `PATCH /watchlist/{list_id}/movies/{movie_id}` - Update a movie (mark as watched)
-   - `DELETE /watchlist/{list_id}/movies/{movie_id}` - Remove a movie from a watchlist
-
-2. **Search & Discovery**
-   - `GET /search?query={search_term}` - Search movies by title
-   - `GET /discover` - Discover movies with filtering options
-
-### API Validation
-
-Use Pydantic models for request/response validation:
-
-```python
-class MovieBase(BaseModel):
-    title: str
-    tmdb_id: int
-    year: Optional[int] = None
-    poster_path: Optional[str] = None
-    overview: Optional[str] = None
-    vote_average: Optional[float] = None
-    genre_ids: Optional[str] = None
-
-class MovieCreate(MovieBase):
-    pass
-
-class Movie(MovieBase):
-    id: UUID
-    status: str = "to_watch"
-    watchlist_id: UUID
-    created_at: datetime
-
-    class Config:
-        orm_mode = True
-```
-
-### Overseerr API Integration
-
-Implement a service to communicate with the Overseerr API:
-
-```python
-class OverseerrService:
-    def __init__(self):
-        self.base_url = "https://overseerr-instance/api/v1"
-        self.client = httpx.AsyncClient()
-
-    async def search_movies(self, query: str, page: int = 1):
-        response = await self.client.get(
-            f"{self.base_url}/search",
-            params={"query": query, "page": page}
-        )
-        return response.json()
-
-    async def discover_movies(self, filters: dict):
-        response = await self.client.get(
-            f"{self.base_url}/discover/movies",
-            params=filters
-        )
-        return response.json()
-```
-
-## Frontend Development
-
-### Component Structure
-
-Organize your components as follows:
+Define the following database schema using SQLAlchemy 2.0:
 
 ```
-src/
-├── components/
-│   ├── layout/
-│   │   ├── Header.tsx
-│   │   └── Layout.tsx
-│   ├── movie/
-│   │   ├── MovieCard.tsx
-│   │   ├── MovieGrid.tsx
-│   │   ├── MovieDetails.tsx
-│   │   └── MovieSearch.tsx
-│   ├── watchlist/
-│   │   ├── WatchlistCreate.tsx
-│   │   ├── WatchlistView.tsx
-│   │   └── WatchlistTabs.tsx
-│   └── ui/
-│       ├── Button.tsx
-│       ├── Input.tsx
-│       └── ...
-├── hooks/
-│   ├── useWatchlist.ts
-│   ├── useMovieSearch.ts
-│   └── usePolling.ts
-├── pages/
-│   ├── HomePage.tsx
-│   ├── WatchlistPage.tsx
-│   └── SearchPage.tsx
-└── services/
-    ├── api.ts
-    └── watchlistService.ts
+# Watchlists table
+class Watchlist(Base):
+    __tablename__ = "watchlists"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    name = Column(String(255), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+# Movies table
+class Movie(Base):
+    __tablename__ = "movies"
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    tmdb_id = Column(Integer, nullable=False)
+    title = Column(String(255), nullable=False)
+    year = Column(Integer)
+    poster_path = Column(Text)
+    overview = Column(Text)
+    vote_average = Column(Float)
+    genre_ids = Column(Text)  # JSON string of genres
+    status = Column(Enum("to_watch", "watched", name="movie_status"), default="to_watch", nullable=False)
+    watchlist_id = Column(UUID(as_uuid=True), ForeignKey("watchlists.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
 ```
 
-### State Management
+---
 
-Use React Query for API data with polling for real-time updates:
+### Frontend Architecture
 
-```tsx
-// Hook for fetching watchlist with auto-refresh
-export function useWatchlist(listId: string) {
-  return useQuery({
-    queryKey: ["watchlist", listId],
-    queryFn: () => fetchWatchlist(listId),
-    refetchInterval: 3000, // Poll every 3 seconds
-  });
-}
+1. **Component Structure**:
+   ```
+   src/
+   ├── components/
+   │   ├── layout/
+   │   ├── movie/
+   │   ├── watchlist/
+   │   └── ui/
+   ├── hooks/
+   ├── pages/
+   └── services/
+   ```
 
-// Hook for movie search
-export function useMovieSearch(query: string, filters: MovieFilters) {
-  return useQuery({
-    queryKey: ["search", query, filters],
-    queryFn: () => searchMovies(query, filters),
-    enabled: query.length > 2,
-  });
+2. **State Management**:
+   - Use React Query for server state and polling:
+     ```
+     export function useWatchlist(listId: string) {
+         return useQuery({
+             queryKey: ["watchlist", listId],
+             queryFn: () => fetchWatchlist(listId),
+             refetchInterval: 3000,
+         });
+     }
+     ```
+   - Use Zustand for UI state:
+     ```
+     export const useWatchlistStore = create((set) => ({
+         activeTab: "to_watch",
+         setActiveTab: (tab) => set({ activeTab: tab }),
+         filters: { genre: null, year: null, rating: null },
+         setFilter: (key, value) => set((state) => ({
+             filters: { ...state.filters, [key]: value }
+         })),
+     }));
+     ```
+
+3. **UI Components**:
+   - Implement reusable components like `MovieCard`, `MovieGrid`, and `WatchlistTabs` using TailwindCSS and shadcn/ui.
+
+4. **Pages**:
+   - Create the following pages:
+     - HomePage (Landing Page)
+     - WatchlistPage (View and manage a single watchlist)
+     - SearchPage (Search and discover movies)
+
+---
+
+## Styling Guidelines
+
+1. Use TailwindCSS for styling with shadcn/ui components for accessibility.
+2. Default to dark mode.
+3. Ensure responsiveness with grid layouts for movie posters.
+
+Example of a responsive grid layout:
+```
+export function MovieGrid({ movies }: { movies: Movie[] }) {
+    return (
+        
+            {movies.map((movie) => (
+                
+            ))}
+        
+    );
 }
 ```
 
-Use Zustand for UI state:
-
-```tsx
-export const useWatchlistStore = create<WatchlistStore>((set) => ({
-  activeTab: "to_watch",
-  setActiveTab: (tab) => set({ activeTab: tab }),
-  
-  filters: {
-    genre: null,
-    year: null,
-    rating: null,
-  },
-  setFilter: (key, value) => set((state) => ({
-    filters: { ...state.filters, [key]: value }
-  })),
-}));
-```
-
-### Movie Grid UI
-
-Implement a responsive grid layout for movie posters:
-
-```tsx
-export function MovieGrid({ movies, onMovieClick }: MovieGridProps) {
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-      {movies.map((movie) => (
-        <MovieCard 
-          key={movie.id} 
-          movie={movie} 
-          onClick={() => onMovieClick(movie)} 
-        />
-      ))}
-    </div>
-  );
-}
-
-export function MovieCard({ movie, onClick }: MovieCardProps) {
-  return (
-    <div 
-      className="rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow cursor-pointer"
-      onClick={onClick}
-    >
-      <div className="relative pt-[150%]">
-        <img 
-          src={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : '/placeholder.png'} 
-          alt={movie.title}
-          className="absolute top-0 left-0 w-full h-full object-cover"
-        />
-      </div>
-      <div className="p-2">
-        <h3 className="text-sm font-semibold truncate">{movie.title}</h3>
-        <div className="flex justify-between items-center mt-1">
-          <span className="text-xs">{movie.year}</span>
-          <span className="text-xs flex items-center">
-            <StarIcon className="w-3 h-3 mr-1" />
-            {movie.vote_average?.toFixed(1) || 'N/A'}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-```
-
-### Filtering UI
-
-Implement filter components for movie discovery:
-
-```tsx
-export function MovieFilters({ onChange }: MovieFiltersProps) {
-  const [filters, setFilters] = useState({
-    genre: "",
-    year: "",
-    rating: "",
-  });
-
-  const handleChange = (key: string, value: string) => {
-    const newFilters = { ...filters, [key]: value };
-    setFilters(newFilters);
-    onChange(newFilters);
-  };
-
-  return (
-    <div className="flex flex-wrap gap-4 mb-6">
-      <div>
-        <label className="block text-sm mb-1">Genre</label>
-        <select 
-          className="rounded border p-2 w-36"
-          value={filters.genre}
-          onChange={(e) => handleChange("genre", e.target.value)}
-        >
-          <option value="">All Genres</option>
-          <option value="28">Action</option>
-          <option value="12">Adventure</option>
-          {/* More genres */}
-        </select>
-      </div>
-      
-      <div>
-        <label className="block text-sm mb-1">Year</label>
-        <select 
-          className="rounded border p-2 w-36"
-          value={filters.year}
-          onChange={(e) => handleChange("year", e.target.value)}
-        >
-          <option value="">All Years</option>
-          <option value="2023-2024">2023-2024</option>
-          <option value="2020-2022">2020-2022</option>
-          {/* More ranges */}
-        </select>
-      </div>
-      
-      <div>
-        <label className="block text-sm mb-1">Rating</label>
-        <select 
-          className="rounded border p-2 w-36"
-          value={filters.rating}
-          onChange={(e) => handleChange("rating", e.target.value)}
-        >
-          <option value="">Any Rating</option>
-          <option value="7">7+ ★</option>
-          <option value="8">8+ ★</option>
-          <option value="9">9+ ★</option>
-        </select>
-      </div>
-    </div>
-  );
-}
-```
-
-## Authentication and Sharing
-
-Implement a UUID-based sharing system:
-
-```tsx
-// Creating a new watchlist
-export async function createWatchlist(name: string) {
-  const response = await api.post('/watchlist', { name });
-  return response.data;
-}
-
-// Generate shareable link
-export function getShareableLink(listId: string) {
-  return `${window.location.origin}/watchlist/${listId}`;
-}
-
-// Copy to clipboard function
-export function ShareButton({ listId }: { listId: string }) {
-  const [copied, setCopied] = useState(false);
-  
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(getShareableLink(listId));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-  
-  return (
-    <button 
-      onClick={copyToClipboard}
-      className="rounded bg-primary text-white px-4 py-2"
-    >
-      {copied ? 'Copied!' : 'Share Watchlist'}
-    </button>
-  );
-}
-```
-
-## Additional Guidelines
-
-1. Use TailwindCSS for styling
-2. Implement dark mode by default
-3. Handle loading and error states for all API calls
-4. Add optimistic updates for better UX
-5. Ensure mobile responsiveness with a grid layout that adapts to screen size
-6. Implement proper error boundaries to catch and display errors gracefully
+---
 
 ## Development Workflow
 
-1. Start by setting up the database schema
-2. Implement backend API endpoints
-3. Create the frontend UI components
-4. Connect frontend to backend using React Query
-5. Add client-side filtering and search functionality
-6. Implement watchlist sharing mechanism
-7. Test thoroughly across different screen sizes and devices
-```
+1. Set up the database schema using SQLAlchemy.
+2. Implement backend API endpoints with FastAPI.
+3. Build frontend UI components using React and TailwindCSS.
+4. Integrate the frontend with the backend using React Query.
+5. Add client-side filtering and search functionality.
+6. Implement real-time updates via polling (3-second interval).
+7. Test thoroughly across different devices and screen sizes.
 
-I'll create a functional reference for styling that can be added to your `.windsurfrules` file. This will provide guidance on how to implement the movie watchlist UI using the shadcn/ui components and Tailwind CSS from your Picksies template.
+---
 
-Here's what you can add to your `.windsurfrules` file:
+## Deployment & Operations
 
-```markdown
-## UI Styling Reference
+1. Dockerize the application for deployment.
+2. Use environment variables for configuration (e.g., Overseerr API URL).
+3. Set up CI/CD pipelines to automate testing and deployment.
 
-### Movie Grid Layout
+---
 
-Create a responsive grid layout for the movie cards:
-
-```tsx
-// apps/web/src/components/movie/movie-grid.tsx
-export function MovieGrid({ movies }: { movies: Movie[] }) {
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-      {movies.map((movie) => (
-        <MovieCard key={movie.id} movie={movie} />
-      ))}
-    </div>
-  );
-}
-```
-
-### Movie Card Component
-
-Create an attractive card for each movie using shadcn/ui components:
-
-```tsx
-// apps/web/src/components/movie/movie-card.tsx
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { EyeIcon, EyeOffIcon, XIcon } from "lucide-react";
-
-export function MovieCard({ movie, type = "to_watch" }: { movie: Movie; type?: "to_watch" | "watched" }) {
-  // Hooks for movie actions
-  const { moveToWatched, moveToWatchlist, removeMovie } = useMovieActions();
-  
-  return (
-    <Card className="overflow-hidden transition-all duration-200 hover:scale-105 group">
-      <div className="aspect-[2/3] relative overflow-hidden">
-        {movie.poster_path ? (
-          <img 
-            src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`} 
-            alt={`${movie.title} poster`}
-            className="object-cover w-full h-full"
-          />
-        ) : (
-          <div className="w-full h-full bg-muted flex items-center justify-center">
-            <span className="text-muted-foreground">No image</span>
-          </div>
-        )}
-        
-        {/* Overlay with controls on hover */}
-        <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-          {type === "to_watch" ? (
-            <>
-              <Button size="sm" variant="outline" onClick={() => moveToWatched(movie)}>
-                <EyeIcon className="size-4 mr-1" /> Watched
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => removeMovie(movie.id)}>
-                <XIcon className="size-4" />
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button size="sm" variant="outline" onClick={() => moveToWatchlist(movie)}>
-                <EyeOffIcon className="size-4 mr-1" /> Watchlist
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => removeMovie(movie.id)}>
-                <XIcon className="size-4" />
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
-      
-      <CardContent className="p-3">
-        <div className="flex justify-between items-start gap-1">
-          <h3 className="font-medium text-sm line-clamp-1">{movie.title}</h3>
-          {movie.vote_average && (
-            <Badge variant="secondary" className="text-xs">
-              ★ {movie.vote_average.toFixed(1)}
-            </Badge>
-          )}
-        </div>
-        <div className="text-xs text-muted-foreground mt-1">
-          {movie.year || "Unknown year"}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-```
-
-### Watchlist Page Layout
-
-Create tabs for the watchlist and watched sections:
-
-```tsx
-// apps/web/src/app/watchlist/[id]/page.tsx
-"use client";
-
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useWatchlist } from "@/hooks/use-watchlist";
-import { MovieGrid } from "@/components/movie/movie-grid";
-import { Button } from "@/components/ui/button";
-import { PlusIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
-
-export default function WatchlistPage({ params }: { params: { id: string } }) {
-  const { data: watchlist, isLoading } = useWatchlist(params.id);
-  const router = useRouter();
-  
-  // Filter movies by status
-  const toWatchMovies = watchlist?.movies?.filter(m => m.status === "to_watch") || [];
-  const watchedMovies = watchlist?.movies?.filter(m => m.status === "watched") || [];
-  
-  if (isLoading) {
-    return <div className="container py-8">Loading watchlist...</div>;
-  }
-  
-  if (!watchlist) {
-    return <div className="container py-8">Watchlist not found</div>;
-  }
-  
-  return (
-    <div className="container py-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">{watchlist.name}</h1>
-        <Button onClick={() => router.push("/search")}>
-          <PlusIcon className="size-4 mr-2" /> Add Movies
-        </Button>
-      </div>
-      
-      <Tabs defaultValue="to_watch" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="to_watch">
-            To Watch ({toWatchMovies.length})
-          </TabsTrigger>
-          <TabsTrigger value="watched">
-            Watched ({watchedMovies.length})
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="to_watch">
-          {toWatchMovies.length > 0 ? (
-            <MovieGrid movies={toWatchMovies} />
-          ) : (
-            <div className="text-center py-12">
-              <h3 className="text-xl font-medium mb-2">Your watchlist is empty</h3>
-              <p className="text-muted-foreground mb-4">Start adding movies to watch later</p>
-              <Button onClick={() => router.push("/search")}>Browse Movies</Button>
-            </div>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="watched">
-          {watchedMovies.length > 0 ? (
-            <MovieGrid movies={watchedMovies} />
-          ) : (
-            <div className="text-center py-12">
-              <h3 className="text-xl font-medium mb-2">You haven't watched any movies yet</h3>
-              <p className="text-muted-foreground mb-4">Movies you mark as watched will appear here</p>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
-```
-
-### Search/Discover Page
-
-Create a search page with filters for discovering movies:
-
-```tsx
-// apps/web/src/app/search/page.tsx
-"use client";
-
-import { useState } from "react";
-import { useSearchMovies } from "@/hooks/use-search";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
-import { SearchIcon } from "lucide-react";
-
-export default function SearchPage() {
-  const [query, setQuery] = useState("");
-  const [filters, setFilters] = useState({
-    genre: "",
-    year: "",
-    rating: ""
-  });
-  
-  const { data, isLoading } = useSearchMovies(query, filters);
-  
-  const handleFilterChange = (key: string, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  };
-  
-  return (
-    <div className="container py-8">
-      <h1 className="text-3xl font-bold mb-6">Discover Movies</h1>
-      
-      <div className="mb-8">
-        <div className="relative mb-4">
-          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search for movies..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="text-sm font-medium mb-1.5 block">Genre</label>
-            <Select 
-              value={filters.genre} 
-              onValueChange={(value) => handleFilterChange("genre", value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="All genres" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">All genres</SelectItem>
-                <SelectItem value="28">Action</SelectItem>
-                <SelectItem value="12">Adventure</SelectItem>
-                <SelectItem value="16">Animation</SelectItem>
-                <SelectItem value="35">Comedy</SelectItem>
-                <SelectItem value="18">Drama</SelectItem>
-                {/* Add more genres */}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div>
-            <label className="text-sm font-medium mb-1.5 block">Year Range</label>
-            <Select 
-              value={filters.year} 
-              onValueChange={(value) => handleFilterChange("year", value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Any year" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Any year</SelectItem>
-                <SelectItem value="2020-2024">2020-2024</SelectItem>
-                <SelectItem value="2010-2019">2010-2019</SelectItem>
-                <SelectItem value="2000-2009">2000-2009</SelectItem>
-                <SelectItem value="1990-1999">1990-1999</SelectItem>
-                <SelectItem value="1980-1989">1980-1989</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div>
-            <label className="text-sm font-medium mb-1.5 block">Minimum Rating</label>
-            <Select 
-              value={filters.rating} 
-              onValueChange={(value) => handleFilterChange("rating", value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Any rating" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Any rating</SelectItem>
-                <SelectItem value="7">7+ ★</SelectItem>
-                <SelectItem value="8">8+ ★</SelectItem>
-                <SelectItem value="9">9+ ★</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
-      
-      {isLoading ? (
-        <div className="py-12 text-center">Searching for movies...</div>
-      ) : data?.results?.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {data.results.map((movie) => (
-            <SearchResultCard key={movie.id} movie={movie} />
-          ))}
-        </div>
-      ) : query ? (
-        <div className="py-12 text-center">
-          <h3 className="text-xl font-medium mb-2">No movies found</h3>
-          <p className="text-muted-foreground">Try adjusting your search or filters</p>
-        </div>
-      ) : (
-        <div className="py-12 text-center">
-          <h3 className="text-xl font-medium mb-2">Start searching</h3>
-          <p className="text-muted-foreground">Enter a movie title to find movies</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SearchResultCard({ movie }: { movie: Movie }) {
-  const { addToWatchlist, addToWatched } = useMovieActions();
-  
-  return (
-    <Card className="flex overflow-hidden h-[180px]">
-      <div className="w-1/3 flex-shrink-0">
-        {movie.poster_path ? (
-          <img 
-            src={`https://image.tmdb.org/t/p/w200${movie.poster_path}`} 
-            alt={`${movie.title} poster`}
-            className="object-cover w-full h-full"
-          />
-        ) : (
-          <div className="w-full h-full bg-muted flex items-center justify-center">
-            <span className="text-muted-foreground">No image</span>
-          </div>
-        )}
-      </div>
-      
-      <CardContent className="p-4 flex flex-col flex-1">
-        <div className="flex-1">
-          <h3 className="font-semibold">{movie.title}</h3>
-          <div className="text-sm text-muted-foreground">
-            {movie.release_date?.substring(0, 4) || "Unknown year"}
-            {movie.vote_average ? ` • ${movie.vote_average.toFixed(1)} ★` : ""}
-          </div>
-          <p className="text-sm line-clamp-2 mt-2">{movie.overview || "No description available"}</p>
-        </div>
-        
-        <div className="flex gap-2 mt-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex-1"
-            onClick={() => addToWatchlist(movie)}
-          >
-            Add to Watchlist
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex-1"
-            onClick={() => addToWatched(movie)}
-          >
-            Add to Watched
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-```
-
-### Home/Landing Page
-
-Create a landing page with New Watchlist creation:
-
-```tsx
-// apps/web/src/app/(marketing)/page.tsx
-"use client";
-
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger
-} from "@/components/ui/dialog";
-import { FilmIcon, PlusIcon } from "lucide-react";
-import { createWatchlist } from "@/api/watchlist.api";
-
-export default function HomePage() {
-  const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [isCreating, setIsCreating] = useState(false);
-  const router = useRouter();
-  
-  const handleCreateWatchlist = async () => {
-    if (!name.trim()) return;
-    
-    setIsCreating(true);
-    try {
-      const watchlist = await createWatchlist({ name });
-      router.push(`/watchlist/${watchlist.id}`);
-    } catch (error) {
-      console.error("Failed to create watchlist:", error);
-    } finally {
-      setIsCreating(false);
-    }
-  };
-  
-  return (
-    <div className="flex flex-col items-center justify-center min-h-[80vh] px-4">
-      <div className="text-center mb-10">
-        <h1 className="text-4xl font-bold mb-4">Movie Watchlist</h1>
-        <p className="text-xl text-muted-foreground max-w-lg mx-auto">
-          Keep track of movies you want to watch and share lists with friends
-        </p>
-      </div>
-      
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Get Started</CardTitle>
-          <CardDescription>
-            Create a new watchlist or access an existing one
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button className="w-full">
-                <PlusIcon className="mr-2 size-4" />
-                Create New Watchlist
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Watchlist</DialogTitle>
-                <DialogDescription>
-                  Give your watchlist a name to get started
-                </DialogDescription>
-              </DialogHeader>
-              <Input
-                placeholder="Watchlist name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="mt-4"
-              />
-              <DialogFooter className="mt-4">
-                <Button 
-                  onClick={handleCreateWatchlist} 
-                  disabled={!name.trim() || isCreating}
-                >
-                  {isCreating ? "Creating..." : "Create Watchlist"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Or
-              </span>
-            </div>
-          </div>
-          
-          <Button variant="outline" className="w-full" onClick={() => router.push("/join")}>
-            <FilmIcon className="mr-2 size-4" />
-            Join Existing Watchlist
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-```
