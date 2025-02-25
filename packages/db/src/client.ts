@@ -1,17 +1,12 @@
-import postgres from "postgres";
-import * as schema from "./schema";
-import { drizzle } from "drizzle-orm/postgres-js";
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import Database from 'better-sqlite3';
+import * as schema from './schema';
 
-export function createClient(connectionString: string) {
-  const client = postgres(connectionString, { prepare: false });
-  const drizzleConfig = {
-    schema,
-    driver: "pg",
-    dbCredentials: {
-      connectionString: connectionString,
-    },
-  };
-  return drizzle(client, drizzleConfig);
+// Create function to get client (useful for testing)
+export function createClient(path: string) {
+  const sqlite = new Database(path);
+  return drizzle(sqlite, { schema });
 }
 
-export const db = createClient(process.env.DATABASE_URL!);
+// Default export using sqlite.db in project root
+export const db = createClient(process.env.DATABASE_URL || 'sqlite.db');

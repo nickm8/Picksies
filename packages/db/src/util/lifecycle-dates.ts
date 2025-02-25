@@ -1,8 +1,9 @@
-import { timestamp } from "drizzle-orm/pg-core";
+import { integer } from 'drizzle-orm/sqlite-core';
 
 export const lifecycleDates = {
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => new Date()),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' })
+    .$defaultFn(() => new Date())
 };

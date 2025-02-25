@@ -1,18 +1,11 @@
-import { pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core";
-import { lifecycleDates } from "./util/lifecycle-dates";
-export const users = pgTable("users", {
-  userId: varchar("user_id", { length: 128 }).primaryKey(),
-  // Add more clerk fields you want to sync here
-  email: text("email").notNull(),
+// Change from pg-specific types to SQLite types
+import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { lifecycleDates } from './util/lifecycle-dates';
+
+export const users = sqliteTable('users', {
+  userId: text('user_id').primaryKey(),
+  email: text('email').notNull(),
   ...lifecycleDates,
 });
 
-export const posts = pgTable("posts", {
-  id: varchar("id", { length: 255 }).primaryKey(),
-  title: varchar("title", { length: 255 }).notNull(),
-  content: text("content").notNull(),
-  userId: varchar("user_id", { length: 128 })
-    .notNull()
-    .references(() => users.userId),
-  ...lifecycleDates,
-});
+// Other tables similarly need to change from pgTable to sqliteTable

@@ -34,6 +34,9 @@ A collaborative movie tracking app that lets you create, share, and manage watch
 
 2. Install dependencies:
    ```bash
+   nvm install 18.19.1
+   nvm use 18.19.1
+   npm install -g pnpm
    pnpm install
    ```
 

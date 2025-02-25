@@ -1,14 +1,10 @@
-import { config } from "dotenv";
 import { defineConfig } from "drizzle-kit";
 
-config({ path: ".env" });
-
 export default defineConfig({
-  verbose: true,
-  schemaFilter: ["public"],
   schema: "./src/index.ts",
-  dialect: "postgresql",
+  dialect: "sqlite",
+  driver: "better-sqlite3",
   dbCredentials: {
-    url: process.env.DATABASE_URL!,
+    url: "sqlite.db",
   },
 });
