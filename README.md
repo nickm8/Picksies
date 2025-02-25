@@ -1,6 +1,6 @@
 # Movie Watchlist Application
 
-A collaborative movie tracking app that lets you create, share, and manage watchlists with friends. Built on the webapp-starter template.
+A collaborative movie tracking app that lets you create, share, and manage watchlists with friends.
 
 ![Movie Watchlist App](https://placehold.co/300x100?text=Movie+Watchlist+App)
 
