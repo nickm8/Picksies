@@ -7,10 +7,14 @@
 - UUID-based shareable links with no traditional login required
 - Optional display name for user attribution on suggestions/comments
 - Backend validation of list access:
-  ```python
-  @app.get("/list/{list_id}")
-  async def get_list(list_id: UUID = Depends(valid_list_id)):
-      # List retrieval logic
+  ```typescript
+  app.get("/list/:listId", async (c) => {
+    const listId = c.req.param('listId')
+    if (!isValidUUID(listId)) {
+      return c.json({ error: "Invalid list ID" }, 400)
+    }
+    // List retrieval logic
+  })
   ```
 
 ### Watchlist Management
@@ -165,12 +169,12 @@ curl --location --globoff '{{overseer_url}}/api/v1/search?query=The%20Order&page
 
 ### Backend Stack
 
-| Component     | Technology              | Implementation Details        |
-| ------------- | ----------------------- | ----------------------------- |
-| API Framework | FastAPI                 | Pydantic validation models    |
-| Database      | SQLite + SQLAlchemy 2.0 | Alembic migrations            |
-| API Client    | httpx                   | Async Overseerr communication |
-| Auth          | UUID4                   | Link-based access control     |
+| Component     | Technology        | Implementation Details                   |
+| ------------- | ----------------- | ---------------------------------------- |
+| API Framework | Hono              | Type-safe API development                |
+| Database      | SQLite + Drizzle  | Lightweight ORM with TypeScript support  |
+| API Client    | fetch             | Native fetch for Overseerr communication |
+| Auth          | UUID4             | Link-based access control                |
 
 ### Frontend Stack
 
@@ -199,45 +203,75 @@ curl --location --globoff '{{overseer_url}}/api/v1/search?query=The%20Order&page
   - genre: Filter by genre ID
   - primaryReleaseDateGte/Lte: Date range filtering
   - withRuntimeGte/Lte: Movie length filtering
-  - voteAverageGte/Lte: Quality filtering
-  - watchRegion + watchProviders: Streaming availability filters
+  - voteAverageGte/Lte: Rating filtering
+  - watchRegion/watchProviders: Availability filtering
 
-### API Flow
+## Data Model
 
+### Movie Entity
+
+```typescript
+interface Movie {
+  id: number;             // Primary key
+  tmdbId: number;         // TMDB ID for the movie
+  title: string;          // Movie title
+  posterPath: string;     // Relative path to poster image
+  releaseDate: string;    // ISO date format
+  overview: string;       // Movie description
+  runtime: number;        // Movie runtime in minutes
+  voteAverage: number;    // Rating from 0-10
+  genres: number[];       // Array of genre IDs
+  listId: string;         // UUID of the list this movie belongs to
+  status: "toWatch" | "watched"; // Current status
+  addedAt: string;        // ISO date of when movie was added
+  watchedAt: string | null; // ISO date of when marked as watched (if applicable)
+  addedBy: string | null; // Optional user name who added the movie
+}
 ```
-Frontend -> Backend -> Overseerr -> Backend -> Frontend
+
+### List Entity
+
+```typescript
+interface List {
+  id: string;              // UUID for the list
+  name: string;            // Custom list name
+  createdAt: string;       // ISO date
+  lastUpdatedAt: string;   // ISO date of last list modification
+  movies: Movie[];         // Movies in this list
+}
 ```
 
-### Database Models
+## API Endpoints
 
-- **MovieList**: id (UUID), name, created_at
-- **Movie**: id, title, year, poster_path, overview, tmdb_id, list_id, status, genre_ids, vote_average
-- **User** (optional): id, name, list_id
+### List Management
 
-## Deployment & Operations
+```typescript
+app.get("/lists/:listId", async (c) => { /* ... */ })
+app.post("/lists", async (c) => { /* ... */ })
+app.delete("/lists/:listId", async (c) => { /* ... */ })
+```
 
-- Dockerized single-container deployment
-- Environment variables for configuration:
-  - Overseerr API URL and credentials
-  - Database settings
-  - Application settings
+### Movie Management
 
-## User Flow
+```typescript
+app.get("/lists/:listId/movies", async (c) => { /* ... */ })
+app.post("/lists/:listId/movies", async (c) => { /* ... */ })
+app.patch("/lists/:listId/movies/:movieId", async (c) => { /* ... */ })
+app.delete("/lists/:listId/movies/:movieId", async (c) => { /* ... */ })
+```
 
-1. User creates or accesses a watchlist via unique UUID link
-2. User searches for movies using the integrated search with advanced filters
-3. User adds movies to the "To Watch" list
-4. After watching, user marks movies as watched, automatically moving them to "Watched" list
-5. Watchlist refreshes automatically every 3 seconds to show updates from other users
-6. User can share the watchlist link with others for collaborative management
+### Movie Search
 
-## Enhancements from Technical Specification
+```typescript
+app.get("/search", async (c) => { /* ... */ })
+app.get("/discover", async (c) => { /* ... */ })
+```
 
-- More detailed Overseerr API integration specifics
-- Enhanced filtering capabilities using Overseerr's robust parameter set
-- Optimistic UI updates for better user experience
-- Structured validation patterns for backend API
-- Clear specification of polling mechanism (3-second interval)
+## Future Enhancements
+
+- Social sharing features for favorite movies
+- Comments and discussion threads
+- Notifications for new additions to shared lists
+- More advanced filtering options
 - Improved database schema with additional movie metadata fields
 - Better defined user attribution system
-
