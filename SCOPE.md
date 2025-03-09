@@ -241,8 +241,3 @@ Frontend -> Backend -> Overseerr -> Backend -> Frontend
 - Improved database schema with additional movie metadata fields
 - Better defined user attribution system
 
-.windsurfrules
-
-it seems to use 1 file approach for windsurf
-
-based on the scope return a .windsurfrules for this project
