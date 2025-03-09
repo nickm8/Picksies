@@ -1,11 +1,31 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-
-import { postRoutes } from "@/modules/posts";
-
 import { logger } from "hono/logger";
-import { errorHandler } from "@/pkg/middleware/error";
-import { webhookRoutes } from "@/modules/webhooks/webhook.routes";
+
+// Import our routes
+import { listRoutes } from "@/modules/lists/list.routes";
+import { movieRoutes } from "@/modules/movies/movie.routes";
+import { overseerrRoutes } from "@/modules/overseerr/overseerr.routes";
+
+// Import database and migrations
+import { db, runMigrations } from "@repo/db";
+
+// Run migrations when the server starts
+(async () => {
+  try {
+    console.log("Running database migrations...");
+    const migrationSuccess = await runMigrations();
+    if (migrationSuccess) {
+      console.log("✅ Database migrations applied successfully");
+    } else {
+      console.error("⚠️ Database migrations failed, but server will continue");
+    }
+    console.log("Database connected successfully");
+  } catch (error) {
+    console.error("❌ Error during database initialization:", error);
+    // Continue running the server even if migrations fail
+  }
+})();
 
 const app = new Hono();
 
@@ -29,9 +49,9 @@ app.get("/health", (c) => {
 
 const routes = app
   .basePath("/api")
-  .use("*", errorHandler())
-  .route("/webhooks", webhookRoutes)
-  .route("/posts", postRoutes);
+  .route("/lists", listRoutes)
+  .route("/movies", movieRoutes)
+  .route("/overseerr", overseerrRoutes);
 
 export type AppType = typeof routes;
 

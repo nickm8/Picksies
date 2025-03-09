@@ -14,8 +14,13 @@
     "@repo/id": "workspace:*",
     "@repo/logs": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "drizzle-orm": "^0.39.3",
+    "better-sqlite3": "^7.6.2",
     "hono": "^4",
+    "node-fetch": "^3.3.2",
     "svix": "^1.59.1",
+    "uuid": "^9.0.1",
+    "@types/uuid": "^9.0.8",
     "vitest": "^3.0.6",
     "zod": "^3.24.2"
   },

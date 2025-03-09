@@ -1,8 +1,8 @@
 Your task is to build a **Movie Watchlist Application** using the following stack:
 
 - **Frontend**: React 18 with TypeScript, Vite
-- **Backend**: FastAPI with Pydantic models
-- **Database**: SQLite with SQLAlchemy 2.0
+- **Backend**: Hono with TypeScript
+- **Database**: SQLite with Drizzle ORM
 - **State Management**: Zustand for global state, React Query for server state
 - **Styling**: Tailwind CSS with shadcn/ui components
 - **External API**: Overseerr API for movie data
@@ -11,3 +11,9 @@ Your task is to build a **Movie Watchlist Application** using the following stac
 1. Use TailwindCSS for styling with shadcn/ui components for accessibility.
 
 - Refer to SCOPE.md for more details.
+
+
+## Overseer API Endpoints
+1. Use `overseerr-api.yml` for the Overseer API endpoints.
+
+

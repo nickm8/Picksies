@@ -1,10 +1,13 @@
 import { defineConfig } from "drizzle-kit";
+import { resolve } from "path";
 
 export default defineConfig({
-  schema: "./src/index.ts",
+  schema: "./src/schema.ts",
+  out: "./migrations",
   dialect: "sqlite",
-  driver: "better-sqlite3",
   dbCredentials: {
-    url: "sqlite.db",
+    url: resolve(__dirname, "sqlite.db"),
   },
+  verbose: true,
+  strict: true,
 });
