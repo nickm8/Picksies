@@ -44,3 +44,4 @@ combine.py
 GEN_REPO_CONTEXT.md
 .env
 *prompt*.md
+.vscode/claudesync.json
