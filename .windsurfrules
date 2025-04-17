@@ -1,6 +1,6 @@
 Your task is to build a **Movie Watchlist Application** using the following stack:
 
-- Ensure you use pnpm not npm.
+- When running commands, use pnpm not npm.
 
 - **Frontend**: React 18 with TypeScript, Vite
 - **Backend**: FastAPI with Pydantic models
