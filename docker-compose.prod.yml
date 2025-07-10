@@ -1,0 +1,31 @@
+# docker-compose.prod.yml
+# Production configuration for Docker Compose
+
+version: '3.8'
+
+services:
+  web:
+    build:
+      target: production
+    environment:
+      - DEBUG=0
+      - DJANGO_SETTINGS_MODULE=core.settings.production
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn --bind 0.0.0.0:8000 --workers 3 core.wsgi:application"
+    restart: always
+
+  nginx:
+    image: nginx:alpine
+    container_name: movie_app_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - static_data:/app/staticfiles:ro
+      - media_data:/app/media:ro
+    depends_on:
+      - web
+    restart: always

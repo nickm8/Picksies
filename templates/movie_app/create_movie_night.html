@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Movie Night</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0">🎬 Create New Movie Night</h4>
+                    </div>
+                    <div class="card-body">
+                        <form id="createMovieNightForm">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="title" class="form-label">Title *</label>
+                                <input type="text" class="form-control" id="title" name="title" 
+                                       placeholder="e.g., Friday Night Movies" required maxlength="200">
+                            </div>
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description</label>
+                                <textarea class="form-control" id="description" name="description" 
+                                          rows="3" placeholder="Optional description for this movie night"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Create Movie Night
+                            </button>
+                            <a href="{% url 'movie_app:homepage' %}" class="btn btn-secondary ms-2">Cancel</a>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Success Result -->
+                <div id="successResult" class="card mt-4" style="display: none;">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">🎉 Movie Night Created!</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Your movie night has been created successfully. Share this link with your friends:</p>
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" id="shareUrl" readonly>
+                            <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard()">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                        <a id="visitLink" href="#" class="btn btn-primary">Visit Movie Night</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+    <script>
+        document.getElementById('createMovieNightForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const submitBtn = this.querySelector('button[type="submit"]');
+            
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating...';
+            
+            try {
+                const response = await fetch('{% url "movie_app:create_movie_night" %}', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Hide form and show success
+                    this.closest('.card').style.display = 'none';
+                    const successDiv = document.getElementById('successResult');
+                    successDiv.style.display = 'block';
+                    
+                    // Set share URL
+                    document.getElementById('shareUrl').value = data.share_url;
+                    document.getElementById('visitLink').href = data.share_url;
+                } else {
+                    alert('Error creating movie night. Please try again.');
+                }
+                
+            } catch (error) {
+                alert('Error creating movie night. Please try again.');
+            } finally {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-plus me-2"></i>Create Movie Night';
+            }
+        });
+        
+        function copyToClipboard() {
+            const shareUrl = document.getElementById('shareUrl');
+            shareUrl.select();
+            shareUrl.setSelectionRange(0, 99999);
+            document.execCommand('copy');
+            
+            // Show feedback
+            const copyBtn = event.target.closest('button');
+            const originalText = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+            copyBtn.classList.remove('btn-outline-secondary');
+            copyBtn.classList.add('btn-success');
+            
+            setTimeout(() => {
+                copyBtn.innerHTML = originalText;
+                copyBtn.classList.remove('btn-success');
+                copyBtn.classList.add('btn-outline-secondary');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

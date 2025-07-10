@@ -1,15 +1,10 @@
-Your task is to build a **Movie Watchlist Application** using the following stack:
+This is a Django and inertia-django application.
 
-- When running commands, use pnpm not npm.
+Context7
+*   Always use the context7 MCP server to reference documentation for libraries like **Inertia**
+*   For the tokens, start with **5000** but then increase to **20000** if your first search didn't give relevant documentation.
+*   Only search three times maximum for any specific piece of documentation.
 
-- **Frontend**: React 18 with TypeScript, Vite
-- **Backend**: FastAPI with Pydantic models
-- **Database**: SQLite with SQLAlchemy 2.0
-- **State Management**: Zustand for global state, React Query for server state
-- **Styling**: Tailwind CSS with shadcn/ui components
-- **External API**: Overseerr API for movie data
-
-## Styling Guidelines
-1. Use TailwindCSS for styling with shadcn/ui components for accessibility.
-
-- Refer to SCOPE.md for more details.
+Code Structure & Modularity
+*   Never create a file longer than 500 lines of code. If a file approaches this limit, refactor by splitting it into modules or helper files.
+*   Use clear, consistent imports (prefer relative imports within packages).

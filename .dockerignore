@@ -1,0 +1,91 @@
+# .dockerignore
+# Files and directories to exclude from Docker build context
+
+# Git
+.git
+.gitignore
+.github/
+
+# Docker
+# Don't exclude Dockerfile as it's needed for the build context
+docker-compose*.yml
+.dockerignore
+
+# Virtual environments
+venv/
+env/
+film_venv/
+ENV/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.tox
+.coverage
+.pytest_cache
+.mypy_cache
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+static/dist/
+
+# Node.js
+node_modules/
+package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+
+# Development
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+desktop.ini
+$RECYCLE.BIN/
+
+# Documentation
+README.md
+SETUP.md
+WINDOWS.md
+docs/
+*.md
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Temporary files
+tmp/
+temp/
+logs/
+
+# Scripts (but keep docker-entrypoint.sh)
+fix-npm-permissions.sh
+*.bat
+
+# Large directories that shouldn't be in build context
+backup.json
+*.dump
+*.sql

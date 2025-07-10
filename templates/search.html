@@ -1,0 +1,271 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="search-header bg-primary text-white p-4 rounded mb-4">
+                <h2 class="mb-3">
+                    <i class="fas fa-search me-2"></i>
+                    {% if search_term %}
+                        Search Results for "{{ search_term }}"
+                    {% else %}
+                        Movie Search
+                    {% endif %}
+                </h2>
+                
+                <!-- Enhanced Search Form -->
+                <form method="get" action="{% url 'movie_app:search' %}" class="d-flex">
+                    <div class="input-group input-group-lg">
+                        <input type="text" 
+                               class="form-control" 
+                               name="search" 
+                               value="{{ search_term }}" 
+                               placeholder="Search for movies by title or description..."
+                               style="min-width: 400px;">
+                        <button class="btn btn-light" type="submit">
+                            <i class="fas fa-search me-2"></i>Search
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% if search_term %}
+        <!-- Local Database Results -->
+        {% if search_movies %}
+        <div class="row mb-5">
+            <div class="col-12">
+                <h4 class="mb-3">
+                    <i class="fas fa-database me-2"></i>
+                    Movies in Our Database 
+                    <span class="badge bg-primary">{{ search_movies.paginator.count }}</span>
+                </h4>
+                
+                <div class="row">
+                    {% for movie in search_movies %}
+                    <div class="col-lg-6 col-xl-4 mb-4">
+                        <div class="card h-100 shadow-sm">
+                            <div class="row g-0 h-100">
+                                <div class="col-4">
+                                    <img src="{{ movie.poster }}" 
+                                         class="img-fluid rounded-start h-100" 
+                                         style="object-fit: cover; min-height: 200px;"
+                                         alt="{{ movie.title }}"
+                                         onerror="this.src='https://via.placeholder.com/200x300?text=No+Image'">
+                                </div>
+                                <div class="col-8">
+                                    <div class="card-body d-flex flex-column h-100">
+                                        <h6 class="card-title">
+                                            <a href="{{ movie.get_absolute_url }}" class="text-decoration-none">
+                                                {{ movie.title }}
+                                            </a>
+                                        </h6>
+                                        
+                                        <!-- Genres -->
+                                        <div class="mb-2">
+                                            {% for genre in movie.genre.all %}
+                                                <span class="badge bg-light text-dark me-1">{{ genre.title }}</span>
+                                            {% endfor %}
+                                        </div>
+                                        
+                                        <!-- Overview -->
+                                        <p class="card-text small text-muted flex-grow-1">
+                                            {{ movie.overview|truncatechars:120 }}
+                                        </p>
+                                        
+                                        <!-- Footer Info -->
+                                        <div class="mt-auto">
+                                            <div class="small text-muted">
+                                                <i class="fas fa-calendar me-1"></i>Release Date: {{ movie.release_date }}
+                                                {% if movie.vote_average %}
+                                                    • <i class="fas fa-star text-warning me-1"></i>{{ movie.vote_average }}/10
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Pagination -->
+                {% include 'components/search-pagination.html' with pagination_object=search_movies %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- TMDB Results -->
+        {% if tmdb_results and has_tmdb_api %}
+        <div class="row mb-5">
+            <div class="col-12">
+                <h4 class="mb-3">
+                    <i class="fas fa-globe me-2"></i>
+                    More Movies from TMDB 
+                    <span class="badge bg-info">{{ tmdb_results|length }}</span>
+                </h4>
+                <p class="text-muted mb-3">
+                    <i class="fas fa-info-circle me-1"></i>
+                    These movies are not yet in our database. Click on any movie to add it.
+                </p>
+                
+                <div class="row">
+                    {% for movie in tmdb_results %}
+                    <div class="col-lg-6 col-xl-4 mb-4">
+                        <div class="card h-100 shadow-sm border-info tmdb-movie-card" 
+                             style="cursor: pointer;"
+                             onclick="addMovieFromTMDB({{ movie.id }}, '{{ movie.title|escapejs }}')">
+                            <div class="row g-0 h-100">
+                                <div class="col-4">
+                                    {% if movie.poster_path %}
+                                        <img src="{{ movie.poster_path }}" 
+                                             class="img-fluid rounded-start h-100" 
+                                             style="object-fit: cover; min-height: 200px;"
+                                             alt="{{ movie.title }}">
+                                    {% else %}
+                                        <div class="d-flex align-items-center justify-content-center h-100 bg-light rounded-start">
+                                            <i class="fas fa-film fa-2x text-muted"></i>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-8">
+                                    <div class="card-body d-flex flex-column h-100">
+                                        <h6 class="card-title text-info">
+                                            {{ movie.title }}
+                                            <i class="fas fa-plus-circle ms-2"></i>
+                                        </h6>
+                                        
+                                        <!-- Overview -->
+                                        <p class="card-text small text-muted flex-grow-1">
+                                            {{ movie.overview|default:"No description available." }}
+                                        </p>
+                                        
+                                        <!-- Footer Info -->
+                                        <div class="mt-auto">
+                                            <div class="small text-muted">
+                                                {% if movie.release_date %}
+                                                    <i class="fas fa-calendar me-1"></i>Release Date: {{ movie.release_date }}
+                                                {% endif %}
+                                                {% if movie.vote_average %}
+                                                    • <i class="fas fa-star text-warning me-1"></i>{{ movie.vote_average }}/10
+                                                {% endif %}
+                                            </div>
+                                            <div class="small text-info mt-1">
+                                                <i class="fas fa-download me-1"></i>Click to add to database
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- No Results -->
+        {% if not search_movies and not tmdb_results %}
+        <div class="row">
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <i class="fas fa-search fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">No movies found for "{{ search_term }}"</h4>
+                    <p class="text-muted">Try searching with different keywords or check your spelling.</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+    {% else %}
+        <!-- Initial Search State -->
+        <div class="row">
+            <div class="col-12">
+                <div class="text-center py-5">
+                    <i class="fas fa-film fa-4x text-muted mb-3"></i>
+                    <h4 class="text-muted">Start searching for movies</h4>
+                    <p class="text-muted">Enter a movie title or keyword in the search box above.</p>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Toast for notifications -->
+<div class="position-fixed top-0 end-0 p-3" style="z-index: 11">
+    <div id="toast" class="toast hide" role="alert">
+        <div class="toast-header">
+            <strong class="me-auto">Movie Search</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="toastMessage"></div>
+    </div>
+</div>
+
+<style>
+.tmdb-movie-card:hover {
+    transform: translateY(-2px);
+    transition: transform 0.2s ease-in-out;
+}
+
+.search-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+}
+
+.card {
+    transition: all 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+}
+</style>
+
+<script>
+async function addMovieFromTMDB(tmdbId, title) {
+    try {
+        const response = await fetch('/api/add-tmdb-movie/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({ tmdb_id: tmdbId })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast(`${title} added to database successfully!`, 'success');
+            // Remove the card from TMDB results
+            event.target.closest('.tmdb-movie-card').style.display = 'none';
+        } else if (data.exists) {
+            showToast(`${title} is already in the database`, 'info');
+        } else {
+            showToast(data.error || 'Error adding movie', 'danger');
+        }
+        
+    } catch (error) {
+        showToast('Error connecting to server', 'danger');
+    }
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.getElementById('toast');
+    const toastMessage = document.getElementById('toastMessage');
+    
+    toastMessage.textContent = message;
+    toast.className = `toast show bg-${type === 'danger' ? 'danger' : type === 'success' ? 'success' : 'info'} text-white`;
+    
+    setTimeout(() => {
+        toast.classList.add('hide');
+    }, 3000);
+}
+</script>
+
+{% endblock %}

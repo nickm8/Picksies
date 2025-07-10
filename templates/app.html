@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title|default:"Movie Nights - Django App" }}</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom styles -->
+    <style>
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- App container -->
+    <div id="app"></div>
+    
+    <!-- Vue.js 3 from CDN -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    
+    <!-- Main Application -->
+    <script>
+        const { createApp, ref, reactive } = Vue;
+        
+        // Get initial data from Django
+        const initialData = {{ inertia_data|default:'{}'|safe }};
+        const componentName = '{{ component_name|default:"Welcome" }}';
+        
+        // Utility functions
+        const formatDate = (dateString) => {
+            return new Date(dateString).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        };
+        
+        const timeAgo = (dateString) => {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffInSeconds = Math.floor((now - date) / 1000);
+            
+            if (diffInSeconds < 60) return 'just now';
+            if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+            if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+            return `${Math.floor(diffInSeconds / 86400)}d ago`;
+        };
+        
+        // Component definitions
+        const Welcome = {
+            template: `
+                <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+                    <div class="container mx-auto px-4 py-12">
+                        <div class="text-center mb-12">
+                            <h1 class="text-5xl font-bold text-gray-900 mb-4">🎬 Movie Nights</h1>
+                            <p class="text-xl text-gray-600 mb-8" v-text="displayMessage"></p>
+                            <div class="flex justify-center space-x-4">
+                                <a href="/nights/" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition duration-200">
+                                    View Movie Nights
+                                </a>
+                                <a href="/nights/create/" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition duration-200">
+                                    Create New Night
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div class="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+                            <div class="bg-white p-6 rounded-xl shadow-md">
+                                <div class="text-3xl mb-4">🎯</div>
+                                <h3 class="text-lg font-semibold mb-2">Suggest Movies</h3>
+                                <p class="text-gray-600">Anyone with the link can suggest movies from our database of 10,000+ films.</p>
+                            </div>
+                            <div class="bg-white p-6 rounded-xl shadow-md">
+                                <div class="text-3xl mb-4">👍</div>
+                                <h3 class="text-lg font-semibold mb-2">Vote Together</h3>
+                                <p class="text-gray-600">Second suggestions you like and see what movies people have already watched.</p>
+                            </div>
+                            <div class="bg-white p-6 rounded-xl shadow-md">
+                                <div class="text-3xl mb-4">📊</div>
+                                <h3 class="text-lg font-semibold mb-2">Track History</h3>
+                                <p class="text-gray-600">Keep track of what you've watched together with ratings and notes.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-12 text-center">
+                            <p class="text-gray-500">No accounts required • Share links with friends • Works on any device</p>
+                        </div>
+                    </div>
+                </div>
+            `,
+            props: ['message'],
+            computed: {
+                displayMessage() {
+                    return this.message || 'Collaborative movie planning made easy';
+                }
+            }
+        };
+        
+        const Test = {
+            template: `
+                <div class="p-8">
+                    <h1 class="text-2xl font-bold">Vue.js Test</h1>
+                    <p>Status: <span v-text="displayTest"></span></p>
+                    <div class="mt-4">
+                        <a href="/" class="text-blue-600 hover:underline">Back to Home</a>
+                    </div>
+                </div>
+            `,
+            props: ['test'],
+            computed: {
+                displayTest() {
+                    return this.test || 'working';
+                }
+            }
+        };
+        
+        const MovieNightIndex = {
+            template: `
+                <div class="min-h-screen bg-gray-50">
+                    <div class="container mx-auto px-4 py-8">
+                        <div class="flex justify-between items-center mb-8">
+                            <h1 class="text-3xl font-bold text-gray-900">Movie Nights</h1>
+                            <a href="/nights/create/" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium">
+                                Create New Night
+                            </a>
+                        </div>
+                        
+                        <div v-if="!nights || nights.length === 0" class="text-center py-12">
+                            <div class="text-6xl mb-4">🎬</div>
+                            <h2 class="text-xl font-semibold text-gray-700 mb-2">No movie nights yet</h2>
+                            <p class="text-gray-500 mb-6">Create your first movie night to get started!</p>
+                            <a href="/nights/create/" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium">
+                                Create Movie Night
+                            </a>
+                        </div>
+                        
+                        <div v-else class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div v-for="night in nights" :key="night.id" class="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition duration-200">
+                                <h3 class="text-xl font-semibold text-gray-900 mb-2" v-text="night.name"></h3>
+                                <p v-if="night.description" class="text-gray-600 mb-4" v-text="night.description"></p>
+                                
+                                <div class="flex justify-between items-center text-sm text-gray-500 mb-4">
+                                    <span v-text="formatDate(night.created_at)"></span>
+                                    <div class="flex space-x-3">
+                                        <span v-text="night.suggestions_count + ' suggestions'"></span>
+                                        <span v-text="night.watched_count + ' watched'"></span>
+                                    </div>
+                                </div>
+                                
+                                <a :href="night.url" class="block w-full bg-blue-600 hover:bg-blue-700 text-white text-center py-2 rounded-lg font-medium transition duration-200">
+                                    View Details
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            props: ['nights'],
+            methods: {
+                formatDate
+            }
+        };
+        
+        const MovieNightCreate = {
+            template: `
+                <div class="min-h-screen bg-gray-50">
+                    <div class="container mx-auto px-4 py-8">
+                        <div class="max-w-2xl mx-auto">
+                            <h1 class="text-3xl font-bold text-gray-900 mb-8">Create Movie Night</h1>
+                            
+                            <div class="bg-white rounded-lg shadow-md p-6">
+                                <form @submit.prevent="createNight">
+                                    <div class="mb-6">
+                                        <label for="name" class="block text-sm font-medium text-gray-700 mb-2">
+                                            Movie Night Name *
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            id="name" 
+                                            v-model="form.name"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            placeholder="e.g., Friday Night Movies, Horror Movie Marathon"
+                                            required
+                                        >
+                                    </div>
+                                    
+                                    <div class="mb-6">
+                                        <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
+                                            Description (Optional)
+                                        </label>
+                                        <textarea 
+                                            id="description" 
+                                            v-model="form.description"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            rows="3"
+                                            placeholder="Add any details about the movie night..."
+                                        ></textarea>
+                                    </div>
+                                    
+                                    <div class="flex space-x-4">
+                                        <button 
+                                            type="submit" 
+                                            class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition duration-200"
+                                            :disabled="!form.name.trim()"
+                                        >
+                                            Create Movie Night
+                                        </button>
+                                        <a href="/nights/" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-2 rounded-lg font-medium transition duration-200">
+                                            Cancel
+                                        </a>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            data() {
+                return {
+                    form: {
+                        name: '',
+                        description: ''
+                    }
+                };
+            },
+            methods: {
+                async createNight() {
+                    try {
+                        const response = await fetch('/nights/create/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': this.getCsrfToken()
+                            },
+                            body: JSON.stringify(this.form)
+                        });
+                        
+                        if (response.ok) {
+                            window.location.href = '/nights/';
+                        } else {
+                            alert('Error creating movie night');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error creating movie night');
+                    }
+                },
+                getCsrfToken() {
+                    const cookies = document.cookie.split(';');
+                    for (let cookie of cookies) {
+                        const [name, value] = cookie.trim().split('=');
+                        if (name === 'csrftoken') {
+                            return value;
+                        }
+                    }
+                    return '';
+                }
+            }
+        };
+        
+        const MovieNightDetail = {
+            template: `
+                <div class="min-h-screen bg-gray-50">
+                    <div class="container mx-auto px-4 py-8">
+                        <div class="mb-8">
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <h1 class="text-3xl font-bold text-gray-900" v-text="night.name"></h1>
+                                    <p v-if="night.description" class="text-gray-600 mt-2" v-text="night.description"></p>
+                                </div>
+                                <div class="flex space-x-4">
+                                    <a href="/nights/" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg font-medium transition duration-200">
+                                        Back to Nights
+                                    </a>
+                                    <button @click="showSuggestionModal = true" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition duration-200">
+                                        Add Movie Suggestion
+                                    </button>
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-500">
+                                Created on <span v-text="formatDate(night.created_at)"></span>
+                            </p>
+                        </div>
+                        
+                        <div v-if="!suggestions || suggestions.length === 0" class="text-center py-12">
+                            <div class="text-6xl mb-4">🎬</div>
+                            <h2 class="text-xl font-semibold text-gray-700 mb-2">No movie suggestions yet</h2>
+                            <p class="text-gray-500 mb-6">Be the first to suggest a movie for this night!</p>
+                            <button @click="showSuggestionModal = true" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium">
+                                Add Movie Suggestion
+                            </button>
+                        </div>
+                        
+                        <div v-else class="space-y-6">
+                            <div v-for="suggestion in suggestions" :key="suggestion.id" class="bg-white rounded-lg shadow-md p-6">
+                                <div class="flex space-x-4">
+                                    <div class="flex-shrink-0">
+                                        <img 
+                                            v-if="suggestion.movie.poster" 
+                                            :src="suggestion.movie.poster" 
+                                            :alt="suggestion.movie.title"
+                                            class="w-24 h-36 object-cover rounded-lg"
+                                        >
+                                        <div v-else class="w-24 h-36 bg-gray-200 rounded-lg flex items-center justify-center">
+                                            <span class="text-gray-400 text-xs">No Image</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="flex-1">
+                                        <div class="flex justify-between items-start mb-2">
+                                            <h3 class="text-xl font-semibold text-gray-900" v-text="suggestion.movie.title"></h3>
+                                            <div class="flex items-center space-x-2">
+                                                <span v-if="suggestion.movie.vote_average" class="text-sm text-yellow-600">
+                                                    ★ <span v-text="suggestion.movie.vote_average"></span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        
+                                        <p class="text-sm text-gray-600 mb-2">
+                                            Suggested by <span class="font-medium" v-text="suggestion.recommender_name"></span>
+                                            • <span v-text="timeAgo(suggestion.created_at)"></span>
+                                        </p>
+                                        
+                                        <div v-if="suggestion.movie.genres.length > 0" class="mb-3">
+                                            <span v-for="genre in suggestion.movie.genres" :key="genre" 
+                                                  class="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full mr-2 mb-1"
+                                                  v-text="genre">
+                                            </span>
+                                        </div>
+                                        
+                                        <p class="text-gray-700 mb-4" v-text="suggestion.synopsis"></p>
+                                        
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex space-x-4 text-sm text-gray-600">
+                                                <span>
+                                                    🤟 <span v-text="suggestion.seconds_count"></span> Keen
+                                                </span>
+                                                <span>
+                                                    👁️ <span v-text="suggestion.views_count"></span> Seen
+                                                </span>
+                                                <span v-if="suggestion.watched" class="text-green-600">
+                                                    ✓ Watched
+                                                </span>
+                                            </div>
+                                            
+                                            <div class="flex space-x-2">
+                                                <button v-if="canSecond(suggestion)" 
+                                                        @click="secondSuggestion(suggestion)"
+                                                        class="bg-blue-100 hover:bg-blue-200 text-blue-700 text-sm px-3 py-1 rounded-lg transition duration-200">
+                                                    🤙 Keen
+                                                </button>
+                                                <button @click="markAsSeen(suggestion)"
+                                                        class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm px-3 py-1 rounded-lg transition duration-200">
+                                                    👁️ I have seen
+                                                </button>
+                                                <button v-if="!suggestion.watched" 
+                                                        @click="markAsWatched(suggestion)"
+                                                        class="bg-green-100 hover:bg-green-200 text-green-700 text-sm px-3 py-1 rounded-lg transition duration-200">
+                                                    Mark as Watched
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div v-if="suggestion.watched" class="mt-4 p-3 bg-green-50 rounded-lg">
+                                            <div class="flex justify-between items-center">
+                                                <span class="text-green-700 font-medium">
+                                                    Watched on <span v-text="formatDate(suggestion.watched.watched_date)"></span>
+                                                </span>
+                                                <span v-if="suggestion.watched.rating" class="text-yellow-600">
+                                                    <span v-for="star in suggestion.watched.rating" :key="star">★</span>
+                                                </span>
+                                            </div>
+                                            <p v-if="suggestion.watched.notes" class="text-green-700 mt-2" v-text="suggestion.watched.notes"></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Add Suggestion Modal -->
+                    <div v-if="showSuggestionModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" @click.self="showSuggestionModal = false">
+                        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+                            <div class="p-6">
+                                <div class="flex justify-between items-center mb-6">
+                                    <h2 class="text-2xl font-bold text-gray-900">Add Movie Suggestion</h2>
+                                    <button @click="showSuggestionModal = false" class="text-gray-400 hover:text-gray-600">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                                
+                                <div class="space-y-6">
+                                    <!-- Search Movies -->
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                                            Search for a Movie
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            v-model="movieSearchQuery"
+                                            @input="searchMovies"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            placeholder="Type movie title..."
+                                        >
+                                    </div>
+                                    
+                                    <!-- Search Results -->
+                                    <div v-if="searchResults.length > 0" class="max-h-60 overflow-y-auto border border-gray-200 rounded-lg">
+                                        <div v-for="movie in searchResults" :key="movie.id" 
+                                             @click="selectMovie(movie)"
+                                             :class="{'bg-blue-50 border-blue-200': selectedMovie && selectedMovie.id === movie.id}"
+                                             class="p-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 flex space-x-3">
+                                            <img v-if="movie.poster" :src="movie.poster" :alt="movie.title" 
+                                                 class="w-12 h-18 object-cover rounded flex-shrink-0">
+                                            <div class="flex-1">
+                                                <h4 class="font-medium text-gray-900" v-text="movie.title"></h4>
+                                                <p class="text-sm text-gray-600" v-text="movie.release_date ? new Date(movie.release_date).getFullYear() : ''"></p>
+                                                <div v-if="movie.genres.length > 0" class="mt-1">
+                                                    <span v-for="genre in movie.genres.slice(0, 3)" :key="genre" 
+                                                          class="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded mr-1"
+                                                          v-text="genre">
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div v-if="movie.vote_average" class="flex items-center text-yellow-600 text-sm">
+                                                ★ <span v-text="movie.vote_average"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Selected Movie -->
+                                    <div v-if="selectedMovie" class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                        <h4 class="font-medium text-gray-900 mb-2">Selected Movie:</h4>
+                                        <div class="flex space-x-3">
+                                            <img v-if="selectedMovie.poster" :src="selectedMovie.poster" :alt="selectedMovie.title" 
+                                                 class="w-16 h-24 object-cover rounded">
+                                            <div>
+                                                <h5 class="font-medium" v-text="selectedMovie.title"></h5>
+                                                <p class="text-sm text-gray-600" v-text="selectedMovie.overview"></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Suggestion Form -->
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                                Your Name *
+                                            </label>
+                                            <input 
+                                                type="text" 
+                                                v-model="suggestionForm.recommender_name"
+                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                placeholder="Enter your name"
+                                                required
+                                            >
+                                        </div>
+                                        
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                                Custom Synopsis (Optional)
+                                            </label>
+                                            <textarea 
+                                                v-model="suggestionForm.synopsis_override"
+                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                rows="3"
+                                                placeholder="Add your own description or why you recommend this movie..."
+                                            ></textarea>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Submit Buttons -->
+                                    <div class="flex justify-end space-x-4">
+                                        <button @click="showSuggestionModal = false" class="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition duration-200">
+                                            Cancel
+                                        </button>
+                                        <button @click="submitSuggestion" 
+                                                :disabled="!selectedMovie || !suggestionForm.recommender_name.trim()"
+                                                :class="{'opacity-50 cursor-not-allowed': !selectedMovie || !suggestionForm.recommender_name.trim()}"
+                                                class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-200">
+                                            Add Suggestion
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            props: ['night', 'suggestions'],
+            data() {
+                return {
+                    showSuggestionModal: false,
+                    movieSearchQuery: '',
+                    searchResults: [],
+                    selectedMovie: null,
+                    currentUserName: '', // Store user's name for subsequent actions
+                    suggestionForm: {
+                        recommender_name: '',
+                        synopsis_override: ''
+                    },
+                    searchTimeout: null
+                };
+            },
+            methods: {
+                formatDate,
+                timeAgo,
+                canSecond(suggestion) {
+                    // Don't show second button if user hasn't entered their name yet
+                    if (!this.currentUserName) {
+                        return true; // Show button, they'll be prompted for name
+                    }
+                    // Don't show if this user created the suggestion
+                    return suggestion.recommender_name.toLowerCase() !== this.currentUserName.toLowerCase();
+                },
+                async secondSuggestion(suggestion) {
+                    const userName = this.getCurrentUserName();
+                    if (!userName) return;
+                    
+                    try {
+                        const response = await fetch(`/api/suggestions/${suggestion.id}/second/`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': this.getCsrfToken()
+                            },
+                            body: JSON.stringify({
+                                seconder_name: userName
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        if (response.ok) {
+                            alert(data.message);
+                            window.location.reload();
+                        } else {
+                            alert(data.error || 'Error seconding suggestion');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error seconding suggestion');
+                    }
+                },
+                async markAsSeen(suggestion) {
+                    const userName = this.getCurrentUserName();
+                    if (!userName) return;
+                    
+                    try {
+                        const response = await fetch(`/api/suggestions/${suggestion.id}/viewed/`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': this.getCsrfToken()
+                            },
+                            body: JSON.stringify({
+                                viewer_name: userName
+                            })
+                        });
+                        
+                        const data = await response.json();
+                        if (response.ok) {
+                            alert(data.message);
+                            window.location.reload();
+                        } else {
+                            alert(data.error || 'Error marking as seen');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error marking as seen');
+                    }
+                },
+                async markAsWatched(suggestion) {
+                    const userName = this.getCurrentUserName();
+                    if (!userName) return;
+                    
+                    const confirmed = confirm(`Mark "${suggestion.movie.title}" as watched by the group? This will remove it from the suggestions list.`);
+                    if (!confirmed) return;
+                    
+                    const rating = prompt('Rate this movie (1-5 stars, optional):');
+                    const notes = prompt('Add any notes about watching this movie (optional):');
+                    
+                    try {
+                        const payload = {};
+                        if (rating && !isNaN(rating) && rating >= 1 && rating <= 5) {
+                            payload.rating = parseInt(rating);
+                        }
+                        if (notes && notes.trim()) {
+                            payload.notes = notes.trim();
+                        }
+                        
+                        const response = await fetch(`/api/suggestions/${suggestion.id}/watched/`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': this.getCsrfToken()
+                            },
+                            body: JSON.stringify(payload)
+                        });
+                        
+                        const data = await response.json();
+                        if (response.ok) {
+                            alert(data.message);
+                            window.location.reload();
+                        } else {
+                            alert(data.error || 'Error marking as watched');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Error marking as watched');
+                    }
+                },
+                getCurrentUserName() {
+                    if (!this.currentUserName) {
+                        const name = prompt('Please enter your name:');
+                        if (name && name.trim()) {
+                            this.currentUserName = name.trim();
+                            return this.currentUserName;
+                        }
+                        return null;
+                    }
+                    return this.currentUserName;
+                },
+                searchMovies() {
+                    clearTimeout(this.searchTimeout);
+                    
+                    if (this.movieSearchQuery.trim().length < 2) {
+                        this.searchResults = [];
+                        return;
+                    }
+                    
+                    this.searchTimeout = setTimeout(async () => {
+                        try {
+                            const response = await fetch(`/movie-search/?q=${encodeURIComponent(this.movieSearchQuery)}`);
+                            if (response.ok) {
+                                const data = await response.json();
+                                this.searchResults = data.movies || [];
+                            }
+                        } catch (error) {
+                            console.error('Error searching movies:', error);
+                        }
+                    }, 300);
+                },
+                selectMovie(movie) {
+                    this.selectedMovie = movie;
+                    this.searchResults = [];
+                    this.movieSearchQuery = movie.title;
+                },
+                async submitSuggestion() {
+                    if (!this.selectedMovie || !this.suggestionForm.recommender_name.trim()) {
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch(`/api/movie-nights/${this.night.id}/suggest/`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': this.getCsrfToken()
+                            },
+                            body: JSON.stringify({
+                                movie_id: this.selectedMovie.id,
+                                recommender_name: this.suggestionForm.recommender_name,
+                                synopsis_override: this.suggestionForm.synopsis_override
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            // Store the user's name for future actions
+                            this.currentUserName = this.suggestionForm.recommender_name;
+                            // Refresh the page to show the new suggestion
+                            window.location.reload();
+                        } else {
+                            const errorData = await response.json();
+                            alert(errorData.error || 'Error adding suggestion');
+                        }
+                    } catch (error) {
+                        console.error('Error submitting suggestion:', error);
+                        alert('Error adding suggestion');
+                    }
+                },
+                getCsrfToken() {
+                    const cookies = document.cookie.split(';');
+                    for (let cookie of cookies) {
+                        const [name, value] = cookie.trim().split('=');
+                        if (name === 'csrftoken') {
+                            return value;
+                        }
+                    }
+                    return '';
+                }
+            }
+        };
+        
+        // Component map
+        const components = {
+            'Welcome': Welcome,
+            'Test': Test,
+            'MovieNight/Index': MovieNightIndex,
+            'MovieNight/Create': MovieNightCreate,
+            'MovieNight/Detail': MovieNightDetail
+        };
+        
+        // Create and mount the app
+        const app = createApp({
+            template: `<component :is="currentComponent" v-bind="componentProps" />`,
+            data() {
+                return {
+                    currentComponent: components[componentName] || Welcome,
+                    componentProps: initialData || {}
+                };
+            }
+        });
+        
+        // Register global methods
+        app.config.globalProperties.formatDate = formatDate;
+        app.config.globalProperties.timeAgo = timeAgo;
+        
+        app.mount('#app');
+    </script>
+</body>
+</html>

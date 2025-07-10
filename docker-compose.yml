@@ -1,0 +1,65 @@
+# docker-compose.yml
+# Main Docker Compose configuration for Django Movie App
+
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      target: development
+    container_name: movie_app_web
+    volumes:
+      - .:/app
+      - media_data:/app/media
+      - static_data:/app/staticfiles
+      - ./logs:/app/logs
+      # Add node_modules volume for better performance
+      - node_modules:/app/node_modules
+    ports:
+      - "8001:8001"
+    environment:
+      - DEBUG=1
+      - DJANGO_SETTINGS_MODULE=core.settings.development
+      - POSTGRES_DB=movie_app
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_HOST=db
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/movie_app
+      # Add these for better static file handling
+      - DJANGO_SERVE_STATIC=1
+      - PYTHONPATH=/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+    # Simplified command - let entrypoint handle the setup
+    command: >
+      sh -c "python manage.py runserver 0.0.0.0:8001"
+    restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    container_name: movie_app_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: movie_app
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: movie_app_redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  media_data:
+  static_data:
+  node_modules:

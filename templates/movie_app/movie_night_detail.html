@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ movie_night.title }} - Movie Night</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .movie-card {
+            transition: transform 0.2s ease-in-out;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        .movie-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .movie-poster {
+            width: 120px;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+        .genre-tag {
+            background-color: #f8f9fa;
+            color: #495057;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-right: 4px;
+            margin-bottom: 4px;
+            display: inline-block;
+        }
+        .action-btn {
+            background: none;
+            border: none;
+            padding: 8px 12px;
+            margin: 2px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .action-btn.liked {
+            background-color: #ffeaa7;
+            color: #2d3436;
+        }
+        .action-btn.seen {
+            background-color: #74b9ff;
+            color: white;
+        }
+        .action-btn:hover {
+            transform: scale(1.05);
+        }
+        .watched-badge {
+            background-color: #00b894;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 0.8em;
+            margin-left: 10px;
+        }
+        .search-container {
+            background-color: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .tmdb-result {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tmdb-result:hover {
+            background-color: #f8f9fa;
+            border-color: #007bff;
+        }
+        .delete-btn {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        .delete-btn:hover {
+            opacity: 1;
+        }
+        .priority-high {
+            border-left: 4px solid #f39c12;
+        }
+        .priority-medium {
+            border-left: 4px solid #3498db;
+        }
+        .priority-low {
+            border-left: 4px solid #95a5a6;
+        }
+        
+        /* Random Picker Styles */
+        .btn-gradient-magic {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #feca57, #ff9ff3);
+            background-size: 400% 400%;
+            animation: gradient-shift 3s ease infinite;
+            border: none;
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-gradient-magic:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            color: white;
+        }
+        
+        .btn-gradient-magic .spinner-icon {
+            display: inline-block;
+            transition: transform 0.3s ease;
+        }
+        
+        .btn-gradient-magic:hover .spinner-icon {
+            transform: rotate(360deg);
+        }
+        
+        @keyframes gradient-shift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* Modal Styles */
+        #randomPickerModal .modal-dialog {
+            max-width: 800px;
+        }
+        
+        /* Enhanced Spinning Wheel */
+        .spinning-wheel {
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #feca57, #ff9ff3, #a8e6cf, #ff8b94);
+            background-size: 800% 800%;
+            animation: gradient-shift 1.5s ease infinite, spin 2s linear infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 
+                0 0 60px rgba(255, 107, 107, 0.6),
+                0 0 120px rgba(78, 205, 196, 0.4),
+                inset 0 0 40px rgba(255, 255, 255, 0.2);
+            position: relative;
+        }
+        
+        .spinning-wheel::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: spin 3s linear infinite reverse;
+        }
+        
+        .wheel-inner {
+            width: 180px;
+            height: 180px;
+            background: radial-gradient(circle, 
+                rgba(20, 20, 40, 0.95) 0%, 
+                rgba(40, 40, 80, 0.9) 50%, 
+                rgba(60, 60, 120, 0.8) 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 
+                inset 0 0 30px rgba(0, 0, 0, 0.5),
+                0 0 30px rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+        }
+        
+        .wheel-inner::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, 
+                rgba(255, 255, 255, 0.1) 0%, 
+                transparent 50%, 
+                rgba(255, 255, 255, 0.05) 100%);
+            pointer-events: none;
+        }
+        
+        .movie-icons {
+            animation: counter-spin 2.5s linear infinite;
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .movie-icons span {
+            font-size: 2rem;
+            position: absolute;
+            animation: icon-pulse 0.8s ease infinite alternate, icon-glow 2s ease infinite;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+            filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5));
+        }
+        
+        .movie-icons span:nth-child(1) { 
+            transform: rotate(0deg) translateY(-60px) rotate(0deg); 
+            animation-delay: 0s;
+        }
+        .movie-icons span:nth-child(2) { 
+            transform: rotate(45deg) translateY(-60px) rotate(-45deg); 
+            animation-delay: 0.1s;
+        }
+        .movie-icons span:nth-child(3) { 
+            transform: rotate(90deg) translateY(-60px) rotate(-90deg); 
+            animation-delay: 0.2s;
+        }
+        .movie-icons span:nth-child(4) { 
+            transform: rotate(135deg) translateY(-60px) rotate(-135deg); 
+            animation-delay: 0.3s;
+        }
+        .movie-icons span:nth-child(5) { 
+            transform: rotate(180deg) translateY(-60px) rotate(-180deg); 
+            animation-delay: 0.4s;
+        }
+        .movie-icons span:nth-child(6) { 
+            transform: rotate(225deg) translateY(-60px) rotate(-225deg); 
+            animation-delay: 0.5s;
+        }
+        .movie-icons span:nth-child(7) { 
+            transform: rotate(270deg) translateY(-60px) rotate(-270deg); 
+            animation-delay: 0.6s;
+        }
+        .movie-icons span:nth-child(8) { 
+            transform: rotate(315deg) translateY(-60px) rotate(-315deg); 
+            animation-delay: 0.7s;
+        }
+        
+        /* Center icon */
+        .wheel-center-icon {
+            position: absolute;
+            font-size: 3rem;
+            animation: center-pulse 1s ease infinite alternate, center-glow 2s ease infinite;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.9);
+            color: #ffd700;
+            z-index: 10;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes counter-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(-360deg); }
+        }
+        
+        @keyframes icon-pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.3); }
+        }
+        
+        @keyframes icon-glow {
+            0% { 
+                text-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 0 0 20px rgba(255, 255, 255, 0.4); 
+            }
+            50% { 
+                text-shadow: 0 0 20px rgba(255, 215, 0, 0.9), 0 0 40px rgba(255, 215, 0, 0.6); 
+            }
+            100% { 
+                text-shadow: 0 0 15px rgba(78, 205, 196, 0.8), 0 0 30px rgba(78, 205, 196, 0.5); 
+            }
+        }
+        
+        @keyframes center-pulse {
+            from { transform: scale(1) rotate(0deg); }
+            to { transform: scale(1.1) rotate(10deg); }
+        }
+        
+        @keyframes center-glow {
+            0% { 
+                text-shadow: 0 0 20px rgba(255, 215, 0, 0.9), 0 0 40px rgba(255, 215, 0, 0.6); 
+            }
+            50% { 
+                text-shadow: 0 0 30px rgba(255, 107, 107, 0.9), 0 0 60px rgba(255, 107, 107, 0.6); 
+            }
+            100% { 
+                text-shadow: 0 0 25px rgba(78, 205, 196, 0.9), 0 0 50px rgba(78, 205, 196, 0.6); 
+            }
+        }
+        
+        /* Magic Text */
+        .magic-text {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #feca57, #ff9ff3);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradient-shift 2s ease infinite, text-glow 2s ease infinite;
+            font-weight: bold;
+            text-shadow: 0 0 30px rgba(255, 107, 107, 0.5);
+        }
+        
+        @keyframes text-glow {
+            0%, 100% { filter: drop-shadow(0 0 10px rgba(255, 107, 107, 0.7)); }
+            50% { filter: drop-shadow(0 0 20px rgba(78, 205, 196, 0.7)); }
+        }
+        
+        /* Magic Sparkles */
+        .magic-sparkles {
+            position: relative;
+            height: 50px;
+        }
+        
+        .magic-sparkles::before,
+        .magic-sparkles::after {
+            content: '✨';
+            position: absolute;
+            font-size: 1.5rem;
+            animation: sparkle 2s ease infinite;
+        }
+        
+        .magic-sparkles::before {
+            left: 20%;
+            animation-delay: 0s;
+        }
+        
+        .magic-sparkles::after {
+            right: 20%;
+            animation-delay: 1s;
+        }
+        
+        @keyframes sparkle {
+            0%, 100% { opacity: 0; transform: translateY(0) rotate(0deg); }
+            50% { opacity: 1; transform: translateY(-20px) rotate(180deg); }
+        }
+        
+        /* Result Card */
+        .result-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+            animation: result-entrance 0.8s ease-out;
+        }
+        
+        @keyframes result-entrance {
+            from {
+                opacity: 0;
+                transform: scale(0.8) translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        
+        .crown-icon {
+            font-size: 3rem;
+            animation: crown-bounce 2s ease infinite;
+        }
+        
+        @keyframes crown-bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .tonight-pick-title {
+            background: linear-gradient(45deg, #ffd700, #ffed4e, #ffd700);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradient-shift 3s ease infinite, title-glow 2s ease infinite;
+            font-size: 2.5rem;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        @keyframes title-glow {
+            0%, 100% { filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8)); }
+            50% { filter: drop-shadow(0 0 25px rgba(255, 237, 78, 0.8)); }
+        }
+        
+        .selected-movie-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin: 1rem 0;
+        }
+        
+        .selected-poster {
+            width: 100%;
+            max-width: 200px;
+            border-radius: 10px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            animation: poster-glow 3s ease infinite;
+        }
+        
+        @keyframes poster-glow {
+            0%, 100% { box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3); }
+            50% { box-shadow: 0 8px 35px rgba(102, 126, 234, 0.5); }
+        }
+        
+        .movie-title {
+            color: #2c3e50;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        .movie-details {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        .movie-overview {
+            color: #34495e;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        
+        .action-buttons .btn {
+            border: none;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .action-buttons .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <span class="navbar-brand">🎬 {{ movie_night.title }}</span>
+            <div class="d-flex align-items-center">
+                <select id="filterSelect" class="form-select form-select-sm me-3" style="width: auto;">
+                    <option value="now-showing" {% if filter_type == 'now-showing' %}selected{% endif %}>🎬 Now Showing</option>
+                    <option value="already-seen" {% if filter_type == 'already-seen' %}selected{% endif %}>👁️ Already Seen</option>
+                    <option value="screened" {% if filter_type == 'screened' %}selected{% endif %}>🍿 Screened</option>
+                    <option value="all" {% if filter_type == 'all' %}selected{% endif %}>📋 All</option>
+                </select>
+                <span class="text-light" id="userName"></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- User Name Prompt Modal -->
+        <div class="modal fade" id="userNameModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Welcome to Movie Night!</h5>
+                    </div>
+                    <div class="modal-body">
+                        <p>Please enter your name to participate:</p>
+                        <input type="text" id="userNameInput" class="form-control" placeholder="Your name" maxlength="50">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" onclick="setUserName()">Join Movie Night</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Movie Search Section -->
+        <div class="search-container">
+            <h5 class="mb-3">
+                <i class="fas fa-search me-2"></i>Add New Movie
+            </h5>
+            <div class="row">
+                <div class="col-md-8">
+                    <input type="text" id="movieSearch" class="form-control form-control-lg" 
+                           placeholder="Search for movies to add..." autocomplete="off">
+                </div>
+                <div class="col-md-4">
+                    <button class="btn btn-primary btn-lg w-100" onclick="searchMovies()">
+                        <i class="fas fa-search me-2"></i>Search
+                    </button>
+                </div>
+            </div>
+            <div id="searchResults" class="mt-3"></div>
+        </div>
+
+        <!-- Movie Suggestions -->
+        <div class="row align-items-center mb-4">
+            <div class="col">
+                <h4 class="mb-0">
+                    Movie Suggestions 
+                    <span class="badge bg-primary">{{ suggestions|length }}</span>
+                </h4>
+            </div>
+            {% if show_now_showing and suggestions %}
+            <div class="col-auto">
+                <button id="randomPickerBtn" class="btn btn-lg btn-gradient-magic d-flex align-items-center" onclick="showRandomPicker()">
+                    🎲 <span class="spinner-icon mx-2">🎬</span> 
+                    <span class="d-none d-md-inline">Pick Tonight's Movie!</span>
+                    <span class="d-md-none">Pick Movie!</span>
+                </button>
+            </div>
+            {% endif %}
+        </div>
+
+        <div id="movieSuggestions">
+            {% for suggestion in suggestions %}
+            <div class="movie-card {% if suggestion.like_count > 2 %}priority-high{% elif suggestion.like_count > 0 %}priority-medium{% else %}priority-low{% endif %}" 
+                 data-suggestion-id="{{ suggestion.id }}">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <!-- Movie Poster -->
+                        <div class="col-auto">
+                            <img src="{{ suggestion.movie.poster }}" 
+                                 alt="{{ suggestion.movie.title }}" 
+                                 class="movie-poster"
+                                 onerror="this.src='https://via.placeholder.com/120x180?text=No+Image'">
+                        </div>
+                        
+                        <!-- Movie Details -->
+                        <div class="col">
+                            <div class="d-flex align-items-start justify-content-between">
+                                <div>
+                                    <h5 class="card-title mb-2">
+                                        {{ suggestion.movie.title }}
+                                        {% if suggestion.is_watched_by_group %}
+                                            <span class="watched-badge">
+                                                🍿
+                                                Screened on {{ suggestion.watched_date }}
+                                            </span>
+                                        {% endif %}
+                                    </h5>
+                                    <p class="text-muted small mb-2">
+                                        Suggested by <strong>{{ suggestion.suggested_by|title }}</strong> • 
+                                        {{ suggestion.created_at|timesince }} ago
+                                    </p>
+                                    
+                                    <!-- Genres -->
+                                    <div class="mb-2">
+                                        {% for genre in suggestion.movie.genre.all %}
+                                            <span class="genre-tag">{{ genre.title }}</span>
+                                        {% endfor %}
+                                    </div>
+                                    
+                                    <!-- Overview -->
+                                    <p class="card-text">{{ suggestion.movie.overview|truncatechars:200 }}</p>
+                                    
+                                    <!-- Release Date & Rating -->
+                                    <div class="small text-muted mb-3">
+                                        <i class="fas fa-calendar me-1"></i>Release Date: {{ suggestion.movie.release_date }}
+                                        {% if suggestion.movie.vote_average %}
+                                            • <i class="fas fa-star text-warning me-1"></i>{{ suggestion.movie.vote_average }}/10
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <!-- Delete Button -->
+                                <button class="delete-btn" onclick="deleteSuggestion({{ suggestion.id }})" 
+                                        title="Delete suggestion">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Action Buttons -->
+                            <div class="d-flex flex-wrap align-items-center">
+                                <button class="action-btn like-btn" 
+                                        onclick="toggleLike({{ suggestion.id }})"
+                                        data-suggestion-id="{{ suggestion.id }}">
+                                    🎟️ <span class="like-count">{{ suggestion.like_count }}</span> Keen
+                                </button>
+                                
+                                <button class="action-btn seen-btn" 
+                                        onclick="toggleSeen({{ suggestion.id }})"
+                                        data-suggestion-id="{{ suggestion.id }}"
+                                        title="Seen by: {{ suggestion.get_users_who_have_seen|join:", " }}"
+                                        data-bs-toggle="tooltip" data-bs-placement="top">
+                                    👁️ <span class="seen-count">{{ suggestion.seen_count }}</span> Seen
+                                </button>
+                                
+                                <button class="btn btn-sm btn-outline-success ms-2" 
+                                        onclick="markWatchedByGroup({{ suggestion.id }})"
+                                        title="Mark as screened by group">
+                                    🍿
+                                    {% if suggestion.is_watched_by_group %}Unscreen{% else %}Screen{% endif %}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-5">
+                <i class="fas fa-film fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No movie suggestions yet</h5>
+                <p class="text-muted">Search for movies above to add your first suggestion!</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="position-fixed top-0 end-0 p-3" style="z-index: 11">
+        <div id="toast" class="toast hide" role="alert">
+            <div class="toast-header">
+                <strong class="me-auto">Movie Night</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body" id="toastMessage"></div>
+        </div>
+    </div>
+
+    <!-- Random Movie Picker Modal -->
+    <div class="modal fade" id="randomPickerModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 bg-transparent">
+                <div class="modal-body p-0">
+                    <!-- Spinning Phase -->
+                    <div id="spinningPhase" class="text-center py-5">
+                        <div class="spinning-wheel mx-auto mb-4">
+                            <div class="wheel-inner">
+                                <div class="movie-icons">
+                                    <span>🎬</span>
+                                    <span>🍿</span>
+                                    <span>🎥</span>
+                                    <span>🎭</span>
+                                    <span>🎆</span>
+                                    <span>🎉</span>
+                                    <span>🎲</span>
+                                    <span>✨</span>
+                                </div>
+                                <div class="wheel-center-icon">🎪</div>
+                            </div>
+                        </div>
+                        <h3 id="pickerStatusText" class="text-white magic-text">Picking Tonight's Movie...</h3>
+                        <div class="magic-sparkles"></div>
+                    </div>
+                    
+                    <!-- Result Phase -->
+                    <div id="resultPhase" class="result-card" style="display: none;">
+                        <button type="button" class="btn-close position-absolute top-0 end-0 m-3" 
+                                onclick="closeRandomPicker()" style="z-index: 10;"></button>
+                        
+                        <div class="result-content text-center">
+                            <div class="crown-icon mb-3">👑</div>
+                            <h2 class="tonight-pick-title mb-4">Tonight's Pick!</h2>
+                            
+                            <div class="selected-movie-card">
+                                <div class="row align-items-center">
+                                    <div class="col-md-4">
+                                        <img id="selectedMoviePoster" class="selected-poster" alt="Selected Movie">
+                                    </div>
+                                    <div class="col-md-8">
+                                        <h3 id="selectedMovieTitle" class="movie-title mb-3"></h3>
+                                        <div id="selectedMovieDetails" class="movie-details mb-3"></div>
+                                        <p id="selectedMovieOverview" class="movie-overview"></p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="action-buttons mt-4">
+                                <button class="btn btn-lg btn-primary me-3" onclick="showRandomPicker()">
+                                    🎲 Pick Again
+                                </button>
+                                <button class="btn btn-lg btn-success" onclick="acceptPick()">
+                                    🎆 Perfect Choice!
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables
+        const token = '{{ token }}';
+        const nightId = '{{ movie_night.id }}';
+        let currentUser = localStorage.getItem('movieNightUserName') || '';
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!currentUser) {
+                new bootstrap.Modal(document.getElementById('userNameModal')).show();
+            } else {
+                document.getElementById('userName').textContent = `Hello, ${currentUser}!`;
+                updateUserSpecificUI();
+            }
+            
+            // Initialize Bootstrap tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+            
+            // Filter change handler
+            document.getElementById('filterSelect').addEventListener('change', function() {
+                const filter = this.value;
+                const url = new URL(window.location);
+                
+                // Update or remove filter parameter
+                if (filter === 'now-showing') {
+                    // now-showing is default, so we can remove the parameter
+                    url.searchParams.delete('filter');
+                } else {
+                    url.searchParams.set('filter', filter);
+                }
+                
+                // Preserve the token
+                const token = url.searchParams.get('t');
+                if (token) {
+                    url.searchParams.set('t', token);
+                }
+                
+                window.location.href = url.toString();
+            });
+            
+            // Search on Enter key
+            document.getElementById('movieSearch').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchMovies();
+                }
+            });
+            
+            // Add keyboard support for random picker modal
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeRandomPicker();
+                }
+            });
+        });
+
+        function setUserName() {
+            const name = document.getElementById('userNameInput').value.trim();
+            if (name.length < 2) {
+                showToast('Please enter a name with at least 2 characters', 'danger');
+                return;
+            }
+            
+            currentUser = name;
+            localStorage.setItem('movieNightUserName', name);
+            document.getElementById('userName').textContent = `Hello, ${currentUser}!`;
+            bootstrap.Modal.getInstance(document.getElementById('userNameModal')).hide();
+            updateUserSpecificUI();
+        }
+
+        function updateUserSpecificUI() {
+            // Update like/seen button states based on user interactions
+            const likeButtons = document.querySelectorAll('.like-btn');
+            const seenButtons = document.querySelectorAll('.seen-btn');
+            
+            // You would typically fetch user interactions from the server here
+            // For now, we'll rely on the server-side rendering
+        }
+
+        async function searchMovies() {
+            const query = document.getElementById('movieSearch').value.trim();
+            if (!query) return;
+            
+            try {
+                const response = await fetch(`/api/search-movies/?q=${encodeURIComponent(query)}&movie_night_id=${nightId}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    showToast(data.error, 'danger');
+                    return;
+                }
+                
+                displaySearchResults(data.results);
+            } catch (error) {
+                showToast('Error searching movies. Please try again.', 'danger');
+            }
+        }
+
+        function displaySearchResults(results) {
+            const container = document.getElementById('searchResults');
+            
+            if (results.length === 0) {
+                container.innerHTML = '<p class="text-muted">No movies found. Try a different search term.</p>';
+                return;
+            }
+            
+            let html = '<h6 class="mb-3">Search Results:</h6>';
+            results.forEach(movie => {
+                const isClickable = !movie.already_added;
+                const clickHandler = isClickable ? `onclick="addMovieFromTMDB(${movie.id})"` : '';
+                const cursorStyle = isClickable ? 'cursor: pointer;' : 'cursor: default; opacity: 0.6;';
+                
+                html += `
+                    <div class="tmdb-result" ${clickHandler} style="${cursorStyle}">
+                        <div class="row align-items-center">
+                            <div class="col-auto">
+                                ${movie.poster_path ? 
+                                    `<img src="${movie.poster_path}" alt="${movie.title}" style="width: 60px; height: 90px; object-fit: cover; border-radius: 4px;">` :
+                                    `<div style="width: 60px; height: 90px; background-color: #e9ecef; border-radius: 4px; display: flex; align-items: center; justify-content: center;"><i class="fas fa-film text-muted"></i></div>`
+                                }
+                            </div>
+                            <div class="col">
+                                <h6 class="mb-1">${movie.title}</h6>
+                                <p class="mb-1 small text-muted">Release Date: ${movie.release_date || 'Unknown'} • ⭐ ${movie.vote_average || 'N/A'}</p>
+                                <p class="mb-0 small">${movie.overview || 'No description available.'}</p>
+                            </div>
+                            <div class="col-auto">
+                                ${movie.already_added ? 
+                                    '<span class="badge bg-secondary">Already Added</span>' :
+                                    '<i class="fas fa-plus text-primary"></i>'
+                                }
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        async function addMovieFromTMDB(tmdbId) {
+            if (!currentUser) {
+                showToast('Please set your name first', 'warning');
+                return;
+            }
+            
+            try {
+                // First, add movie to our database
+                const addResponse = await fetch('/api/add-tmdb-movie/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ tmdb_id: tmdbId })
+                });
+                
+                const addData = await addResponse.json();
+                
+                if (addData.error && !addData.exists) {
+                    showToast(addData.error, 'danger');
+                    return;
+                }
+                
+                // Then add as suggestion
+                const suggestResponse = await fetch(`/nights/${nightId}/suggest/?t=${token}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        movie_id: tmdbId,
+                        suggested_by: currentUser
+                    })
+                });
+                
+                const suggestData = await suggestResponse.json();
+                
+                if (suggestData.success) {
+                    showToast(suggestData.message, 'success');
+                    // Clear search
+                    document.getElementById('movieSearch').value = '';
+                    document.getElementById('searchResults').innerHTML = '';
+                    // Reload page to show new suggestion
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    if (suggestData.error.includes('already suggested')) {
+                        showToast('This movie is already in your movie night!', 'info');
+                    } else {
+                        showToast(suggestData.error, 'danger');
+                    }
+                }
+                
+            } catch (error) {
+                showToast('Error adding movie. Please try again.', 'danger');
+            }
+        }
+
+        async function toggleLike(suggestionId) {
+            if (!currentUser) {
+                showToast('Please set your name first', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/nights/${nightId}/suggestions/${suggestionId}/like/?t=${token}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ user_name: currentUser })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const button = document.querySelector(`[data-suggestion-id="${suggestionId}"].like-btn`);
+                    const countSpan = button.querySelector('.like-count');
+                    countSpan.textContent = data.like_count;
+                    
+                    if (data.liked) {
+                        button.classList.add('liked');
+                    } else {
+                        button.classList.remove('liked');
+                    }
+                } else {
+                    showToast(data.error, 'danger');
+                }
+            } catch (error) {
+                showToast('Error updating like status', 'danger');
+            }
+        }
+
+        async function toggleSeen(suggestionId) {
+            if (!currentUser) {
+                showToast('Please set your name first', 'warning');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/nights/${nightId}/suggestions/${suggestionId}/seen/?t=${token}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ user_name: currentUser })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const button = document.querySelector(`[data-suggestion-id="${suggestionId}"].seen-btn`);
+                    const countSpan = button.querySelector('.seen-count');
+                    countSpan.textContent = data.seen_count;
+                    
+                    if (data.seen) {
+                        button.classList.add('seen');
+                    } else {
+                        button.classList.remove('seen');
+                    }
+                } else {
+                    showToast(data.error, 'danger');
+                }
+            } catch (error) {
+                showToast('Error updating seen status', 'danger');
+            }
+        }
+
+        async function markWatchedByGroup(suggestionId) {
+            try {
+                const response = await fetch(`/nights/${nightId}/suggestions/${suggestionId}/watched/?t=${token}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast('Screened status updated!', 'success');
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    showToast(data.error, 'danger');
+                }
+            } catch (error) {
+                showToast('Error updating screened status', 'danger');
+            }
+        }
+
+        async function deleteSuggestion(suggestionId) {
+            if (!confirm('Are you sure you want to delete this suggestion?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/nights/${nightId}/suggestions/${suggestionId}/delete/?t=${token}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(data.message, 'success');
+                    // Remove the movie card from the page
+                    const movieCard = document.querySelector(`[data-suggestion-id="${suggestionId}"]`);
+                    if (movieCard) {
+                        movieCard.remove();
+                    }
+                } else {
+                    showToast(data.error, 'danger');
+                }
+            } catch (error) {
+                showToast('Error deleting suggestion', 'danger');
+            }
+        }
+
+    // Random Movie Picker Functions
+    let currentlySelectedMovie = null;
+    let randomPickerModal = null;
+    let retryCount = 0;
+    const MAX_RETRIES = 3;
+    
+    // Debug helper function
+    function debugMovieCardStructure() {
+        const movieCards = document.querySelectorAll('#movieSuggestions [data-suggestion-id]');
+        console.log('=== DEBUGGING MOVIE CARD STRUCTURE ===');
+        console.log('Total cards found:', movieCards.length);
+        
+        movieCards.forEach((card, index) => {
+            console.log(`\n--- Card ${index} ---`);
+            console.log('Suggestion ID:', card.getAttribute('data-suggestion-id'));
+            console.log('Card classes:', card.className);
+            console.log('Card HTML preview:', card.innerHTML.substring(0, 200) + '...');
+            
+            // Test all the selectors we use
+            const selectors = [
+                'h5.card-title',
+                '.card-title',
+                'h5',
+                'p.card-text',
+                '.card-text',
+                'img.movie-poster',
+                '.movie-poster',
+                'img',
+                '.small.text-muted',
+                'p.text-muted.small'
+            ];
+            
+            selectors.forEach(selector => {
+                const element = card.querySelector(selector);
+                if (element) {
+                    console.log(`✓ Found ${selector}:`, element.textContent ? element.textContent.substring(0, 50) + '...' : element.src || 'Element found');
+                } else {
+                    console.log(`✗ Missing ${selector}`);
+                }
+            });
+        });
+        
+        console.log('=== END DEBUG ===');
+    }
+    
+    // Call this function from browser console if needed: debugMovieCardStructure();
+    window.debugMovieCardStructure = debugMovieCardStructure;
+
+    function showRandomPicker() {
+        try {
+            // No need to validate DOM cards anymore - backend handles everything
+            console.log('Starting random movie picker...');
+
+            // Initialize modal if not done already
+            if (!randomPickerModal) {
+                const modalElement = document.getElementById('randomPickerModal');
+                if (!modalElement) {
+                    console.error('Random picker modal element not found');
+                    showToast('Modal not available. Please try refreshing the page.', 'danger');
+                    return;
+                }
+                randomPickerModal = new bootstrap.Modal(modalElement);
+            }
+
+            // Reset modal state completely
+            const spinningPhase = document.getElementById('spinningPhase');
+            const resultPhase = document.getElementById('resultPhase');
+            
+            if (!spinningPhase || !resultPhase) {
+                console.error('Modal phase elements not found');
+                showToast('Modal structure error. Please try refreshing the page.', 'danger');
+                return;
+            }
+            
+            spinningPhase.style.display = 'block';
+            resultPhase.style.display = 'none';
+            
+            // Clear any previous selection and reset retry count
+            currentlySelectedMovie = null;
+            retryCount = 0;
+            
+            // Reset status text
+            const statusText = document.getElementById('pickerStatusText');
+            if (statusText) {
+                statusText.textContent = 'Picking Tonight\'s Movie...';
+            }
+            
+            // Show modal
+            randomPickerModal.show();
+            
+            // Start the picking process after a short delay
+            setTimeout(() => {
+                performRandomSelection(); // No more movieCards parameter needed
+            }, 1000);
+            
+        } catch (error) {
+            console.error('Error in showRandomPicker:', error);
+            showToast('Error starting random picker. Please try again.', 'danger');
+        }
+    }
+
+    function performRandomSelection() {
+        try {
+            console.log(`Random selection attempt ${retryCount + 1}/${MAX_RETRIES + 1}`);
+            
+            // Get current filter from the page
+            const filterSelect = document.getElementById('filterSelect');
+            const currentFilter = filterSelect ? filterSelect.value : 'now-showing';
+            
+            console.log('Using filter:', currentFilter);
+            
+            // Call the backend API for random selection
+            fetch(`/nights/${nightId}/random-pick/?t=${token}&filter=${currentFilter}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Random movie selected:', data.movie.title);
+                    
+                    // Store the selected movie data
+                    currentlySelectedMovie = {
+                        id: data.movie.id,
+                        title: data.movie.title,
+                        overview: data.movie.overview,
+                        poster: data.movie.poster,
+                        details: `Release Date: ${data.movie.release_date} • ⭐ ${data.movie.vote_average || 'N/A'}/10`,
+                        suggestedBy: data.movie.suggested_by,
+                        genres: data.movie.genres,
+                        likeCount: data.movie.like_count,
+                        seenCount: data.movie.seen_count,
+                        isWatchedByGroup: data.movie.is_watched_by_group,
+                        totalAvailable: data.total_available
+                    };
+                    
+                    // Wait for spinning animation (3 seconds), then show result
+                    setTimeout(() => {
+                        showRandomResult();
+                    }, 3000);
+                    
+                } else {
+                    throw new Error(data.error || 'Unknown API error');
+                }
+            })
+            .catch(error => {
+                throw error; // Re-throw to be caught by outer try-catch
+            });
+            
+        } catch (error) {
+            console.error(`Error in random selection (attempt ${retryCount + 1}):`, error);
+            console.error('Error details:', error.message);
+            
+            // Attempt retry if we haven't exceeded max retries
+            if (retryCount < MAX_RETRIES) {
+                retryCount++;
+                console.log(`Retrying selection... (attempt ${retryCount + 1}/${MAX_RETRIES + 1})`);
+                
+                // Update status text to show retry
+                const statusText = document.getElementById('pickerStatusText');
+                if (statusText) {
+                    statusText.textContent = `Re-spinning the wheel... ✨`;
+                }
+                
+                // Wait a bit before retrying
+                setTimeout(() => {
+                    performRandomSelection(); // No need to pass movieCards anymore
+                }, 800);
+                
+                return; // Don't show error or close modal yet
+            }
+            
+            // If we've exceeded max retries, show error
+            console.error(`Failed to select movie after ${MAX_RETRIES + 1} attempts`);
+            
+            let errorMessage = `Unable to pick a movie after ${MAX_RETRIES + 1} attempts.`;
+            if (error.message && error.message.includes('No movies available')) {
+                errorMessage = 'No movies available in the current filter. Try switching to "All" or add more movies.';
+            }
+            
+            showToast(errorMessage, 'danger');
+            closeRandomPicker();
+        }
+    }
+
+    function showRandomResult() {
+        if (!currentlySelectedMovie) return;
+        
+        // Update result content with richer data from backend
+        document.getElementById('selectedMovieTitle').textContent = currentlySelectedMovie.title;
+        document.getElementById('selectedMovieOverview').textContent = currentlySelectedMovie.overview;
+        
+        // Enhanced details with genres and stats
+        let detailsHtml = currentlySelectedMovie.details + '<br>';
+        // detailsHtml += `Suggested by <strong>${currentlySelectedMovie.suggestedBy}</strong><br>`;
+        
+        if (currentlySelectedMovie.genres && currentlySelectedMovie.genres.length > 0) {
+            detailsHtml += `Genres: ${currentlySelectedMovie.genres.join(', ')}<br>`;
+        }
+        
+        // detailsHtml += `🎫 ${currentlySelectedMovie.likeCount} Keen • 👁️ ${currentlySelectedMovie.seenCount} Seen`;
+        
+        // if (currentlySelectedMovie.totalAvailable) {
+        //     detailsHtml += ` • Picked from ${currentlySelectedMovie.totalAvailable} available movies`;
+        // }
+        
+        document.getElementById('selectedMovieDetails').innerHTML = detailsHtml;
+        document.getElementById('selectedMoviePoster').src = currentlySelectedMovie.poster;
+        
+        // Hide spinning phase and show result
+        document.getElementById('spinningPhase').style.display = 'none';
+        document.getElementById('resultPhase').style.display = 'block';
+        
+        // Add some celebration effects
+        celebrateSelection();
+    }
+
+    function celebrateSelection() {
+        // Simple celebration without confetti
+        showToast(`🎉 ${currentlySelectedMovie.title} has been chosen`, 'success');
+    }
+
+    function acceptPick() {
+        if (!currentlySelectedMovie) return;
+        
+        showToast(`🍿 Great choice! Enjoy watching ${currentlySelectedMovie.title}!`, 'success');
+        closeRandomPicker();
+        
+        // Optional: Could mark this movie as "Tonight's Pick" in the database
+        // markAsTonightsPick(currentlySelectedMovie.id);
+    }
+
+    function closeRandomPicker() {
+        if (randomPickerModal) {
+            randomPickerModal.hide();
+        }
+        currentlySelectedMovie = null;
+    }
+
+    // Optional: Function to mark movie as tonight's pick (for future enhancement)
+    async function markAsTonightsPick(suggestionId) {
+        try {
+            // This could be implemented later to add a special "Tonight's Pick" status
+            console.log('Marking as tonight\'s pick:', suggestionId);
+        } catch (error) {
+            console.error('Error marking as tonight\'s pick:', error);
+        }
+    }
+
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            // Set message and style
+            toastMessage.textContent = message;
+            toast.className = `toast show bg-${type === 'danger' ? 'danger' : type === 'success' ? 'success' : 'info'} text-white`;
+            
+            // Auto hide after 3 seconds
+            setTimeout(() => {
+                toast.classList.add('hide');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
